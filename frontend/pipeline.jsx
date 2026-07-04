@@ -18,10 +18,11 @@ function plSecColor(parentCg) {
   return (s && PL_SEC_COLORS[s.key]) || 'transparent';
 }
 
-function GPipeline({ user, onOpenCompany }) {
+function GPipeline({ user, onOpenCompany, favs, toggleFav }) {
   const { GIcon } = window.G;
   const stages = window.ADE.pipelineStages;
   const empId = user?.empId;
+  const favSet = new Set(favs || []);   // 대시보드와 동일 저장소 (사용자별 즐겨찾기)
 
   const [items, setItems] = useState(() => window.ADE.loadPipeline(empId));
   const [openId, setOpenId] = useState(null);
@@ -48,8 +49,9 @@ function GPipeline({ user, onOpenCompany }) {
     if (q && !(it.name.includes(q) || it.sector.includes(q) || it.cgName.includes(q))) return false;
     return true;
   });
-  // 점수 높은 순으로 상단 정렬
-  const byStage = (sk) => visible.filter((it) => it.stage === sk).sort((a, b) => b.dScore - a.dScore);
+  // 즐겨찾기 우선 → 그 안에서 점수 내림차순 (대시보드 즐겨찾기와 연동)
+  const byStage = (sk) => visible.filter((it) => it.stage === sk).sort((a, b) =>
+    ((favSet.has(b.id) ? 1 : 0) - (favSet.has(a.id) ? 1 : 0)) || (b.dScore - a.dScore));
 
   const open = openId ? items.find((x) => x.id === openId) : null;
 
@@ -106,6 +108,11 @@ function GPipeline({ user, onOpenCompany }) {
                     <div className="g-kcard-main">
                       <div className="g-kcard-top">
                         <span className="g-kcard-name">{it.name}</span>
+                        <button className={`g-favbtn g-kfav ${favSet.has(it.id) ? 'on' : ''}`}
+                          title={favSet.has(it.id) ? '즐겨찾기 해제' : '즐겨찾기'}
+                          onClick={(e) => { e.stopPropagation(); toggleFav && toggleFav(it.id); }}>
+                          <GIcon name={favSet.has(it.id) ? 'star-fill' : 'star'} size={14} />
+                        </button>
                         <span className="g-kscore-badge g-mono">{it.dScore}</span>
                       </div>
                       <div className="g-kcard-sub">{it.cgName} · {it.tier}차 · {it.sector}</div>
@@ -143,7 +150,14 @@ function GPipeline({ user, onOpenCompany }) {
                 <h2 className="g-head" style={{ fontSize: 21, margin: 0 }}>{open.name}</h2>
                 <div className="tx-3" style={{ fontSize: 12.5, marginTop: 3 }}>{open.sector} · {open.listed ? '상장사' : '비상장'}</div>
               </div>
-              <button className="g-pl-x" onClick={() => setOpenId(null)}><GIcon name="close" size={18} /></button>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <button className={`g-favbtn ${favSet.has(open.id) ? 'on' : ''}`}
+                  title={favSet.has(open.id) ? '즐겨찾기 해제' : '즐겨찾기'}
+                  onClick={() => toggleFav && toggleFav(open.id)}>
+                  <GIcon name={favSet.has(open.id) ? 'star-fill' : 'star'} size={17} />
+                </button>
+                <button className="g-pl-x" onClick={() => setOpenId(null)}><GIcon name="close" size={18} /></button>
+              </div>
             </div>
 
             <div className="g-pl-dmetrics">

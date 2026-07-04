@@ -796,3 +796,6 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2c3845; }
 .g-klegend { display: flex; gap: 11px; flex-wrap: wrap; align-items: center; font-size: 11.5px; color: var(--tx-3); }
 .g-klegend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .g-klegend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; flex: none; }
+
+/* 칸반 카드 안 즐겨찾기 별 (컴팩트) */
+.g-kfav { padding: 2px 3px; flex: none; }

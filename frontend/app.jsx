@@ -108,10 +108,10 @@ function A4App() {
 
         <div className="g-scroll" style={(route === 'network' || route === 'pipeline' || (route === 'dash' && !activeCompany)) ? { display: 'flex', overflow: 'hidden' } : {}}>
           {route === 'dash' && (activeCompany
-            ? <GCompanyDash companyId={activeCompany} onBack={goHub} onOpenCompany={openCompanyDash} onOpenNetwork={openNetwork} favs={favs} toggleFav={toggleFav} />
+            ? <GCompanyDash companyId={activeCompany} onBack={goHub} onOpenCompany={openCompanyDash} onOpenNetwork={openNetwork} favs={favs} toggleFav={toggleFav} user={user} />
             : <GHub user={user} section={section} setSection={setSection} favs={favs} toggleFav={toggleFav} onOpenCompany={openCompanyDash} />)}
           {route === 'network' && <A4NetworkView onSelectCompany={setSelected} selectedId={selected} focusCg={focusCg} setFocusCg={setFocusCg} />}
-          {route === 'pipeline' && <GPipeline user={user} onOpenCompany={openCompanyDash} />}
+          {route === 'pipeline' && <GPipeline user={user} onOpenCompany={openCompanyDash} favs={favs} toggleFav={toggleFav} />}
           {route === 'reverse' && <GReverse onSelectCompany={setSelected} />}
         </div>
 

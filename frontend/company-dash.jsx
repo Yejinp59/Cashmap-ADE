@@ -4,7 +4,35 @@
  *    [탭1] 지표 · 공시 분석   [탭2] RM 리포트 생성(PDF 리더기 인라인)
  *  ⚠️ 리포트 탭은 '버튼으로 만든다'가 아니라 '열면 이미 있다'(멘토 피드백).
  * ========================================================================== */
-function GCompanyDash({ companyId, onBack, onOpenCompany, onOpenNetwork, favs, toggleFav }) {
+/* RM 접촉 메모 카드 — 접촉 파이프라인(칸반)과 동일 저장소를 읽고 쓴다.
+ * 여기서 수정하면 파이프라인 카드에, 파이프라인에서 쓰면 여기에 그대로 보인다. */
+function GRmMemoCard({ companyId, empId }) {
+  const { GIcon } = window.G;
+  const [memo, setMemo] = useState('');
+  useEffect(() => {
+    try {
+      const it = window.ADE.loadPipeline(empId).find((x) => x.id === companyId);
+      setMemo(it ? (it.memo || '') : '');
+    } catch (e) { setMemo(''); }
+  }, [companyId, empId]);
+  const save = (v) => {
+    setMemo(v);
+    window.ADE.savePipelineItem(empId, companyId, { memo: v });
+  };
+  return (
+    <div className="g-card g-card-pad">
+      <div className="eyebrow" style={{ marginBottom: 9, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <GIcon name="note" size={13} />RM 접촉 메모 · 파이프라인 연동
+      </div>
+      <textarea className="g-pl-memo" style={{ minHeight: 84, width: '100%', boxSizing: 'border-box', resize: 'vertical' }}
+        value={memo}
+        placeholder="통화·미팅 내용, 다음 액션을 기록하세요. 접촉 파이프라인 카드와 실시간 공유됩니다."
+        onChange={(e) => save(e.target.value)} />
+    </div>
+  );
+}
+
+function GCompanyDash({ companyId, onBack, onOpenCompany, onOpenNetwork, favs, toggleFav, user }) {
   const c = window.ADE.byId[companyId];
   const { GIcon, GPill, GDonut, GScoreBar, GSignal, GTrend, Term, gColor, gSoft } = window.G;
   const GFeat = window.GFeat, GStat = window.GStat, DZModal = window.DisclosureModal;
@@ -94,6 +122,9 @@ function GCompanyDash({ companyId, onBack, onOpenCompany, onOpenNetwork, favs, t
             <div className="eyebrow" style={{ marginBottom: 9 }}>AI 분석 요약</div>
             <p className="tx-2" style={{ fontSize: 14, lineHeight: 1.75, margin: 0 }}>{c.summary}</p>
           </div>
+
+          {/* RM 접촉 메모 — 접촉 파이프라인 카드와 같은 저장소 (실시간 연동·수정 가능) */}
+          <GRmMemoCard companyId={c.id} empId={user?.empId} />
 
           {/* 신호 강도 추이 (시계열) */}
           <div className="g-card">

@@ -788,3 +788,11 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2c3845; }
   color: #1a4b8f !important; font-weight: 500;
   border-bottom: 1px dashed #c9d4de; padding-bottom: 6px;
 }
+
+/* ── 접촉 파이프라인: 섹션(산업)별 카드 배경 틴트 + 범례 ─────────────── */
+.g-kcard { background: color-mix(in srgb, var(--sec, transparent) 8%, var(--surface)); }
+[data-theme='dark'] .g-kcard { background: color-mix(in srgb, var(--sec, transparent) 14%, var(--surface)); }
+.g-kcard:hover { border-color: color-mix(in srgb, var(--sec, var(--gc)) 45%, var(--line)); }
+.g-klegend { display: flex; gap: 11px; flex-wrap: wrap; align-items: center; font-size: 11.5px; color: var(--tx-3); }
+.g-klegend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.g-klegend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; flex: none; }

@@ -5,6 +5,19 @@
  *    · 카드 클릭 → 상세 드로어에서 메모 작성 + 단계 변경 + 대시보드 열기
  *    · 단계·메모는 사용자별 localStorage 저장
  * ========================================================================== */
+/* 섹션(산업)별 카드 배경 틴트 — 어느 생태계 기업인지 한눈에 구분 */
+const PL_SEC_COLORS = {
+  semi:  '#0a8a8a',   // 반도체 — 브랜드 틸
+  ship:  '#2f6fd1',   // 조선업 — 블루
+  ev:    '#7a5ad8',   // 전기차·2차전지 — 바이올렛
+  solar: '#d9950a',   // 태양광 — 앰버
+  bio:   '#d84a8a',   // 바이오 — 로즈
+};
+function plSecColor(parentCg) {
+  const s = window.ADE.sectionByCg ? window.ADE.sectionByCg(parentCg) : null;
+  return (s && PL_SEC_COLORS[s.key]) || 'transparent';
+}
+
 function GPipeline({ user, onOpenCompany }) {
   const { GIcon } = window.G;
   const stages = window.ADE.pipelineStages;
@@ -49,7 +62,13 @@ function GPipeline({ user, onOpenCompany }) {
           <h1 className="g-head" style={{ fontSize: 24, margin: 0 }}>어디까지 진행됐나요?</h1>
           <p className="tx-2" style={{ fontSize: 13.5, margin: '6px 0 0' }}>카드는 <b>점수 높은 순</b>으로 정렬돼요. <b>드래그</b>로 단계를 옮기고, <b>눌러</b> 메모를 남기세요.</p>
         </div>
-        <div style={{ display: 'flex', gap: 9, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* 섹션 색상 범례 */}
+          <div className="g-klegend">
+            {(window.ADE.sections || []).map((s) => PL_SEC_COLORS[s.key] && (
+              <span key={s.key}><i style={{ background: PL_SEC_COLORS[s.key] }} />{s.label}</span>
+            ))}
+          </div>
           <div className="g-pl-search">
             <GIcon name="search" size={16} />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="기업·업종 검색" />
@@ -82,7 +101,7 @@ function GPipeline({ user, onOpenCompany }) {
                     onDragStart={(e) => { setDragId(it.id); e.dataTransfer.effectAllowed = 'move'; }}
                     onDragEnd={() => { setDragId(null); setOverStage(null); }}
                     onClick={() => setOpenId(it.id)}
-                    style={{ '--gc': st.color }}>
+                    style={{ '--gc': st.color, '--sec': plSecColor(it.parent) }}>
                     <span className="g-kgrade" style={{ background: st.color }} />
                     <div className="g-kcard-main">
                       <div className="g-kcard-top">

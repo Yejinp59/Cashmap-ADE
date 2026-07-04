@@ -118,11 +118,12 @@ AI 기반 선제 여신 인텔리전스 플랫폼.
 | # | 항목 | 내용 | 상태 |
 |---|---|---|---|
 | A1 | **리포트 사전 생성 미연결** | "열면 이미 있다" 라벨은 있는데 데모(목업) 기업은 실제로는 클릭 시 생성이었음 | ✅ **해결(7/4)** — 앱 부팅 후 우선순위(POSITIVE·고득점) 순으로 서사를 순차 사전 생성하는 워밍업 구현(`data.js warmupNarratives` + 상단바 진행 표시). 야간 배치와 동일 발상 |
-| A2 | **Git 미사용** | 프로젝트 루트가 git 저장소가 아님 → 실수 한 번에 복구 불가, 팀 공유·이력 없음 | ⚠️ **최우선 권장**: `git init` + `.gitignore`(.env/venv/batch.log/dist) + 첫 커밋 |
-| A3 | **.env 평문 노출 위험** | `backend/.env`에 **팀원 공유 Supabase 접속 문자열**·SECRET_KEY·DART 키가 평문. git 도입 시 반드시 .gitignore 선행 | ⚠️ 대기 (A2와 세트) |
+| A2 | **Git 미사용** | 프로젝트 루트가 git 저장소가 아님 → 실수 한 번에 복구 불가, 팀 공유·이력 없음 | ✅ **해결(7/4)** — Git 재설치(winget) + `git init` + `.gitignore` + 초기 커밋(aa77bd5, 110파일). frontend/ 안의 CRA 잔재 .git 제거 |
+| A3 | **.env 평문 노출 위험** | `backend/.env`에 **팀원 공유 Supabase 접속 문자열**·SECRET_KEY·DART 키가 평문 | ✅ **커밋 차단 확인(7/4)** — `.gitignore`로 제외 검증. 파일 자체는 로컬에만 존재 (배포 머신엔 직접 복사) |
 | A4 | **CLAUDE.md 하단 스테일** | 디렉토리 구조·실행법·API 표가 6/6(로컬 Docker + TS 프론트) 기준으로 현실과 불일치 | ✅ **해결(7/4)** — 아래 섹션들 현행화 완료 |
 | A5 | **LLM 캐시 휘발** | 서사/요약/역방향 캐시가 전부 인메모리 dict → **서버 재시작 시 전부 소실**, 재생성 비용 발생. `report_narratives` 테이블은 실DB 기업용으로만 사용 중 | 🔶 개선 여지 — 데모 서사도 input_hash 키로 테이블에 upsert하면 영속화 가능 (발표 전 서버 재시작 대비) |
-| A6 | **잔재 파일 정리** | `docker-compose.yml`·`init.sql`·`migrations/`(로컬 Docker 시절), `backend/batch.log`, `frontend/new_front/*.zip` | 🔶 삭제 대신 `_archive/`로 이동 권장 (참고 가치 있음) |
+| A6 | **잔재 파일 정리** | `init.sql`·`migrations/`(로컬 Docker 시절), `backend/batch.log`, `frontend/new_front/*.zip` | 🔶 부분 해결(7/4) — 구 compose는 `docker-compose.legacy.yml`로 개명, `docker-compose.yml`은 새 배포 구성으로 교체. 나머지는 `_archive/` 이동 권장 |
+| A7 | **배포 환경 부재** | "어디서든 띄우는" 방법이 없었음 (venv+수동 명령 의존) | ✅ **해결(7/4)** — 도커 배포 구성: nginx(프론트+프록시)/backend/ollama(EXAONE) 3컨테이너, `docker compose up -d --build` 원커맨드. E2E 검증 완료(진짜 EXAONE 생성 확인) |
 
 ### B. 미흡한 부분 (동작하지만 약한 것)
 
@@ -151,9 +152,10 @@ AI 기반 선제 여신 인텔리전스 플랫폼.
 
 ```
 P0 (이번 주 — 발표 안정성)
-  ✅ A1 리포트 워밍업          (7/4 완료)
+  ✅ A1 리포트 워밍업          (7/4 완료 — E2E 검증: 사전 생성분 즉시 표시)
   ✅ A4 문서 현행화            (7/4 완료)
-  □ A2+A3 git init + .gitignore + 첫 커밋   ← 사고 나기 전에
+  ✅ A2+A3 git init + .gitignore + 첫 커밋   (7/4 완료 — aa77bd5)
+  ✅ A7 도커 배포 구성          (7/4 완료 — EXAONE 포함 원커맨드, E2E 검증)
   □ C3 발표 리허설 스크립트
 P1 (다음 — 품질·안정)
   □ C1/A5 데모 서사 DB 영속화 (재시작 대비)
@@ -225,6 +227,24 @@ cashmap/
 ---
 
 ## 실행 방법 (2026-07-04 현행)
+
+### 방법 A — 도커 (배포/시연용 · ⭐ 권장, EXAONE 포함 원커맨드)
+
+```powershell
+cd cashmap
+docker compose up -d --build
+# → http://localhost:3000  (nginx가 프론트 서빙 + /api를 백엔드로 프록시 → CORS 없음)
+# 구성: frontend(nginx:3000) → backend(FastAPI:8000) → ollama(EXAONE) + 외부 Supabase
+# 최초 1회 ollama-init이 EXAONE 1.6GB를 도커 볼륨에 받음(수 분). 그동안은 룰베이스 폴백.
+# 종료: docker compose down   /   로그: docker compose logs -f backend
+```
+
+> 도커가 깔린 **어떤 머신이든**(발표장 PC·팀원 노트북·유료 VPS) 이 한 줄로 전체가 뜬다.
+> 필요한 것: 이 저장소 + `backend/.env`(비밀이라 git에 없음 — 직접 복사) + Docker.
+> 호스트에 Ollama가 이미 있으면 모델 재다운로드 없이:
+> `$env:OLLAMA_URL='http://host.docker.internal:11434'; docker compose up -d backend frontend`
+
+### 방법 B — 로컬 개발 (코드 수정하며 작업할 때)
 
 ```powershell
 # 0) Ollama — 설치돼 있으면 자동 사용, 없어도 룰베이스 폴백으로 동작

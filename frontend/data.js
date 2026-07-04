@@ -624,74 +624,112 @@
     catch (e) { return null; }
   }
 
-  /* 백엔드 실데이터(팀 Supabase)를 목업 화면 위에 '오버레이'.
-   * 목업 57개사(발표 데모)는 그대로 두고, AI-B가 투입한 실 D-Score 기업들을
-   * '실데이터' 섹션(hub 탭)으로 추가한다 — sections/companies/byId 가 전부
-   * 같은 참조라 in-place push 만으로 모든 화면(허브·상세·리포트·3D)에 반영된다.
-   * (구 전면교체 방식 _adaptLive 는 폐기: limit=1000→422, ds.score 필드명 오류로
-   *  동작한 적이 없고, 섹션·피처 구조를 못 채워 전환 시 화면이 깨졌음) */
+  /* 백엔드 실데이터(팀 Supabase)로 '반도체 섹션'을 통째로 교체.
+   * - 목업 반도체(한성전자·에이펙스소재 등 5개사)는 제거하고,
+   *   실 앵커(삼성전자·SK하이닉스) + 실 공급망(supply_chain_edges 15건) +
+   *   실 D-Score(AI-B 투입 5건)로 같은 자리를 채운다.
+   * - 나머지 섹션(조선·전기차·태양광·바이오)은 발표 데모용 목업 유지.
+   * - sections/companies/byId/pipelinePool/alerts 가 전부 같은 참조라
+   *   in-place 수정만으로 모든 화면(허브·상세·리포트·3D·칸반·역방향)에 반영.
+   * (구 전면교체 _adaptLive 는 limit=1000→422·ds.score 필드명 오류로 동작한 적 없어 폐기) */
   async function _overlayLive() {
     const cosRaw = await _jget('/api/companies');
     if (!Array.isArray(cosRaw) || !cosRaw.length) return 0;
-    const dscores = await _jget('/api/ade/dscore?limit=500');   // 백엔드 상한 500
-    if (!Array.isArray(dscores) || !dscores.length) return 0;
+    const dscores = (await _jget('/api/ade/dscore?limit=500')) || [];   // 백엔드 상한 500
+    if (!dscores.length) return 0;
+    const edges = (await _jget('/api/supply-chain')) || [];
     const signals = (await _jget('/api/cashmap/signal/summary')) || [];
 
     const pct = (v) => Math.max(0, Math.min(100, Math.round((v || 0) * 100)));
     const clamp = (v) => Math.max(4, Math.min(96, Math.round(v)));
-    const coBy = {}; cosRaw.forEach((c) => { coBy[c.corp_code] = c; });
+    const CG = 'cg-hanseong';                     // 반도체 섹션의 cg 슬롯을 그대로 재사용
+    const cg = cgById[CG];
+    if (!cg) return 0;
+    if (cg.realized) return 0;                    // 재부트스트랩 중복 방지
+    cg.realized = true;
 
-    // 실 대기업(anchor) 최신 신호 — 섹션 카드/기업 signal 로 사용
+    // ── 1) 목업 반도체 기업 제거 + 얽힌 참조(칸반 풀·경보·역방향 랭킹) 정리 ──
+    const removedIds = {};
+    for (let i = companies.length - 1; i >= 0; i--) {
+      if (companies[i].parent === CG) { removedIds[companies[i].id] = 1; delete byId[companies[i].id]; companies.splice(i, 1); }
+    }
+    for (let i = pipelinePool.length - 1; i >= 0; i--) if (removedIds[pipelinePool[i]]) pipelinePool.splice(i, 1);
+    for (let i = alerts.length - 1; i >= 0; i--)       if (removedIds[alerts[i].id])   alerts.splice(i, 1);
+
+    // ── 2) 앵커를 실데이터로: 한성전자 → 삼성전자 (신호도 실값) ──
     const anchors = cosRaw.filter((c) => c.is_anchor);
     const sigBy = {}; signals.forEach((s) => { sigBy[s.corp_code] = pct(s.latest_score); });
     const anchorSig = Math.max(0, ...anchors.map((a) => sigBy[a.corp_code] || 0)) || 55;
+    cg.name = anchors[0] ? anchors[0].corp_name : '삼성전자';
+    cg.sector = '반도체·메모리';
+    cg.signal = anchorSig;
+    cg.theme = 'HBM · AI 반도체 증설';
+    const sec = sections.find((s) => s.key === 'semi');
+    if (sec) sec.sub = anchors.map((a) => a.corp_name).join('·') + ' 실공급망 · Supabase';
 
-    const CG_ID = 'cg-real';
-    if (!cgById[CG_ID]) {
-      const cg = {
-        id: CG_ID, name: anchors[0] ? anchors[0].corp_name : '삼성전자',
-        sector: '반도체 · 실데이터', signal: anchorSig, filings: 0,
-        theme: 'HBM · AI 반도체',
-      };
-      conglomerates.push(cg); cgById[CG_ID] = cg;
-      sections.push({
-        key: 'real', label: '실데이터',
-        sub: anchors.map((a) => a.corp_name).join('·') + ' 실공급망 · Supabase',
-        cg: CG_ID, icon: 'chip',
-      });
-    }
+    // ── 3) 협력사 = 실 D-Score(5개사) ∪ 실 공급망 엣지(12개사) ──
+    const byName = {};   // corp_name → { ds, edge } 병합
+    dscores.forEach((d) => { byName[d.corp_name] = { ds: d }; });
+    edges.forEach((e) => {
+      const n = e.child_corp; if (!n) return;
+      byName[n] = byName[n] || {};
+      // 같은 협력사가 두 앵커(삼성·하이닉스)에 걸리면 강한 쪽 엣지 유지
+      if (!byName[n].edge || (e.edge_weight || 0) > (byName[n].edge.edge_weight || 0)) byName[n].edge = e;
+      byName[n].customers = (byName[n].customers || []).concat(e.parent_corp).filter((v, i, a) => a.indexOf(v) === i);
+    });
 
     let added = 0;
-    dscores.forEach((d) => {
-      const co = coBy[d.corp_code] || {};
-      const id = 'real-' + (d.corp_code || d.company_id);
-      if (byId[id]) return;                                   // 재부트스트랩 중복 방지
-      const dScore = pct(d.d_score);
-      const rr = (d.rd_ratio || 0) * 100, rg = (d.rd_growth || 0) * 100;
-      const ms = (d.op_margin_slope || 0) * 100, ig = (d.inventor_count_yoy || 0) * 100;
+    Object.keys(byName).forEach((name) => {
+      const { ds, edge, customers } = byName[name];
+      const id = 'real-' + (ds ? ds.corp_code : name);
+      if (byId[id]) return;
+      const scored = !!(ds && ds.d_score != null);
+      const dScore = scored ? pct(ds.d_score) : Math.round((edge ? edge.edge_weight : 0.5) * 75);  // 미산출 → 연결강도 기반 잠정치
+      const rr = ds ? (ds.rd_ratio || 0) * 100 : 0, rg = ds ? (ds.rd_growth || 0) * 100 : 0;
+      const ms = ds ? (ds.op_margin_slope || 0) * 100 : 0, ig = ds ? (ds.inventor_count_yoy || 0) * 100 : 0;
+      const dash = f('–', 8);                     // 미산출 지표 표시
       const c = {
-        id, name: d.corp_name || co.corp_name || String(d.corp_code),
-        sector: (co.sector || '반도체') + ' · 실데이터',
-        listed: true, parent: CG_ID, tier: 1,
-        dScore, grade: d.grade || 'MONITOR',
+        id, name,
+        sector: '반도체 협력사' + (scored ? '' : ' · D-Score 대기'),
+        listed: true, parent: CG, tier: edge ? (edge.tier || 1) : 1,
+        dScore, grade: scored ? (ds.grade || 'MONITOR') : 'MONITOR',
         signal: anchorSig,
         // 실 괴리 지표는 AI-A 산출 대기 — 그때까지 등급 기반 근사(데모 보강)
-        discrepancy: d.grade === 'POSITIVE' ? 10 : d.grade === 'NEGATIVE' ? -10 : 2,
-        features: {
-          patentCount:    f(d.active_patents ?? 0, clamp((d.active_patents || 0) / 4)),
+        discrepancy: !scored ? 0 : ds.grade === 'POSITIVE' ? 10 : ds.grade === 'NEGATIVE' ? -10 : 2,
+        features: scored ? {
+          patentCount:    f(ds.active_patents ?? 0, clamp((ds.active_patents || 0) / 4)),
           rndRatio:       f(+rr.toFixed(1), clamp(rr * 6.5)),
           rndGrowth:      f(+rg.toFixed(0), clamp((rg + 20) * 1.6)),
           marginSlope:    f(+ms.toFixed(1), clamp((ms + 2) * 20)),
-          ipcEntropy:     f(d.ipc_entropy != null ? +(+d.ipc_entropy).toFixed(2) : 0,
-                            d.ipc_entropy != null ? clamp(d.ipc_entropy * 100) : 8),
+          ipcEntropy:     f(ds.ipc_entropy != null ? +(+ds.ipc_entropy).toFixed(2) : 0,
+                            ds.ipc_entropy != null ? clamp(ds.ipc_entropy * 100) : 8),
           inventorGrowth: f(+ig.toFixed(0), clamp(ig + 30)),
           disclosureWill: f(anchorSig, anchorSig),
+        } : {
+          patentCount: dash, rndRatio: dash, rndGrowth: dash, marginSlope: dash,
+          ipcEntropy: dash, inventorGrowth: dash, disclosureWill: f(anchorSig, anchorSig),
         },
-        summary: `팀 Supabase 실데이터 — AI-B D-Score ${dScore}점 (${d.updated_at ? d.updated_at.slice(0, 10) : '초안'} 산출). 괴리·공시 항목은 데모 보강값.`,
-        updatedAt: d.updated_at || new Date().toISOString(),
+        summary: scored
+          ? `팀 Supabase 실데이터 — AI-B D-Score ${dScore}점 (${ds.updated_at ? ds.updated_at.slice(0, 10) : '초안'} 산출)`
+            + (customers ? ` · 주요 고객 ${customers.join('·')}` : '') + '. 괴리·공시 항목은 데모 보강값.'
+          : `실 공급망 등록 기업 (연결강도 ${edge ? edge.edge_weight : '-'} · 고객 ${(customers || []).join('·')}) — D-Score는 AI-B 산출 대기, 표시 점수는 연결강도 기반 잠정치.`,
+        updatedAt: (ds && ds.updated_at) || (edge && edge.created_at) || new Date().toISOString(),
       };
-      companies.push(c); byId[id] = c; added++;
+      companies.push(c); byId[id] = c; pipelinePool.push(id); added++;
     });
+
+    // ── 4) 집계·경보·역방향 랭킹을 새 구성으로 재계산 ──
+    counts.pearls   = companies.filter((c) => c.grade === 'POSITIVE').length;
+    counts.bubbles  = companies.filter((c) => c.grade === 'NEGATIVE').length;
+    counts.monitors = companies.filter((c) => c.grade === 'MONITOR').length;
+    const realCos = companies.filter((c) => c.parent === CG);
+    realCos.filter((c) => c.grade !== 'POSITIVE').slice(0, 2).forEach((c) => {
+      alerts.push({ id: c.id, name: c.name, grade: c.grade, discrepancy: c.discrepancy,
+        parent: cg.name, sector: c.sector, updatedAt: c.updatedAt, msg: '신호 추세 변동 — 관찰 권고' });
+    });
+    const sc = reverseScenarios.find((s) => s.origin === CG);
+    if (sc) sc.ranked = realCos.sort((a, b) => b.dScore - a.dScore).slice(0, 5).map((c) => c.id);
+
     return added;
   }
 

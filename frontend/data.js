@@ -290,11 +290,14 @@
     reverseQuery:  (text) => reverseQuery(text),
 
     // ---- 섹션(산업) ----
+    // 한 섹션에 앵커(대기업)가 여럿일 수 있다 (예: 반도체 = 삼성전자 + SK하이닉스) → s.cgs 배열 지원
     sectionByKey: (key) => sections.find((s) => s.key === key),
-    sectionByCg:  (cg) => sections.find((s) => s.cg === cg),
+    sectionByCg:  (cg) => sections.find((s) => s.cg === cg || (s.cgs || []).includes(cg)),
     companiesInSection: (key) => {
       const s = sections.find((x) => x.key === key);
-      return s ? companies.filter((c) => c.parent === s.cg).sort((a, b) => b.dScore - a.dScore) : [];
+      if (!s) return [];
+      const cgset = [s.cg].concat(s.cgs || []);
+      return companies.filter((c) => cgset.includes(c.parent)).sort((a, b) => b.dScore - a.dScore);
     },
     // ---- 즐겨찾기 (사용자별 · localStorage — 백엔드 연동 교체 지점) ----
     favKey: (empId) => 'cashmap.favs.' + (empId || 'guest'),
@@ -656,16 +659,32 @@
     for (let i = pipelinePool.length - 1; i >= 0; i--) if (removedIds[pipelinePool[i]]) pipelinePool.splice(i, 1);
     for (let i = alerts.length - 1; i >= 0; i--)       if (removedIds[alerts[i].id])   alerts.splice(i, 1);
 
-    // ── 2) 앵커를 실데이터로: 한성전자 → 삼성전자 (신호도 실값) ──
+    // ── 2) 앵커를 실데이터로: 첫 앵커(삼성전자)는 기존 슬롯 재사용,
+    //       나머지 앵커(SK하이닉스 등)는 별도 허브로 추가 — 같은 '반도체' 섹션에 묶는다 ──
     const anchors = cosRaw.filter((c) => c.is_anchor);
     const sigBy = {}; signals.forEach((s) => { sigBy[s.corp_code] = pct(s.latest_score); });
     const anchorSig = Math.max(0, ...anchors.map((a) => sigBy[a.corp_code] || 0)) || 55;
     cg.name = anchors[0] ? anchors[0].corp_name : '삼성전자';
     cg.sector = '반도체·메모리';
-    cg.signal = anchorSig;
+    cg.signal = (anchors[0] && sigBy[anchors[0].corp_code]) || anchorSig;
     cg.theme = 'HBM · AI 반도체 증설';
+    const cgIdByAnchorName = {};                  // 앵커 기업명 → cg id (엣지 parent_corp 매칭용)
+    if (anchors[0]) cgIdByAnchorName[anchors[0].corp_name] = CG;
+    const extraCgIds = [];
+    anchors.slice(1).forEach((a) => {
+      const id = 'cg-real-' + a.corp_code;
+      cgIdByAnchorName[a.corp_name] = id;
+      extraCgIds.push(id);
+      if (!cgById[id]) {
+        const xcg = { id, name: a.corp_name, sector: '반도체·메모리', signal: sigBy[a.corp_code] || anchorSig, filings: 0, theme: 'HBM · AI 메모리' };
+        conglomerates.push(xcg); cgById[id] = xcg;
+      }
+    });
     const sec = sections.find((s) => s.key === 'semi');
-    if (sec) sec.sub = anchors.map((a) => a.corp_name).join('·') + ' 실공급망 · Supabase';
+    if (sec) {
+      sec.sub = anchors.map((a) => a.corp_name).join('·') + ' 실공급망 · Supabase';
+      sec.cgs = [CG].concat(extraCgIds);          // 반도체 섹션 = 두 앵커 모두
+    }
 
     // ── 3) 협력사 = 실 D-Score(5개사) ∪ 실 공급망 엣지(12개사) ──
     const byName = {};   // corp_name → { ds, edge } 병합
@@ -688,10 +707,15 @@
       const rr = ds ? (ds.rd_ratio || 0) * 100 : 0, rg = ds ? (ds.rd_growth || 0) * 100 : 0;
       const ms = ds ? (ds.op_margin_slope || 0) * 100 : 0, ig = ds ? (ds.inventor_count_yoy || 0) * 100 : 0;
       const dash = f('–', 8);                     // 미산출 지표 표시
+      // 주 소속 = 연결강도가 가장 센 앵커 (엣지 없으면 첫 앵커), 나머지 고객은 교차 연결로 보존
+      const primaryCg = (edge && cgIdByAnchorName[edge.parent_corp]) || CG;
+      const crossCgs = (customers || [])
+        .map((n) => cgIdByAnchorName[n])
+        .filter((cgid) => cgid && cgid !== primaryCg);
       const c = {
         id, name,
         sector: '반도체 협력사' + (scored ? '' : ' · D-Score 대기'),
-        listed: true, parent: CG, tier: edge ? (edge.tier || 1) : 1,
+        listed: true, parent: primaryCg, crossCgs, tier: edge ? (edge.tier || 1) : 1,
         dScore, grade: scored ? (ds.grade || 'MONITOR') : 'MONITOR',
         signal: anchorSig,
         // 실 괴리 지표는 AI-A 산출 대기 — 그때까지 등급 기반 근사(데모 보강)
@@ -722,10 +746,10 @@
     counts.pearls   = companies.filter((c) => c.grade === 'POSITIVE').length;
     counts.bubbles  = companies.filter((c) => c.grade === 'NEGATIVE').length;
     counts.monitors = companies.filter((c) => c.grade === 'MONITOR').length;
-    const realCos = companies.filter((c) => c.parent === CG);
+    const realCos = companies.filter((c) => String(c.id).indexOf('real-') === 0);
     realCos.filter((c) => c.grade !== 'POSITIVE').slice(0, 2).forEach((c) => {
       alerts.push({ id: c.id, name: c.name, grade: c.grade, discrepancy: c.discrepancy,
-        parent: cg.name, sector: c.sector, updatedAt: c.updatedAt, msg: '신호 추세 변동 — 관찰 권고' });
+        parent: (cgById[c.parent] || cg).name, sector: c.sector, updatedAt: c.updatedAt, msg: '신호 추세 변동 — 관찰 권고' });
     });
     const sc = reverseScenarios.find((s) => s.origin === CG);
     if (sc) sc.ranked = realCos.sort((a, b) => b.dScore - a.dScore).slice(0, 5).map((c) => c.id);

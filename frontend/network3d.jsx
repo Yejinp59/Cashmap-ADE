@@ -31,7 +31,10 @@ function A4Network3D({ onSelectCompany, mode, setMode, focusCg }) {
     const nodes = [], links = [];
     const cgs = section === 'all'
       ? conglomerates
-      : conglomerates.filter((cg) => { const s = sections.find((x) => x.cg === cg.id); return s && s.key === section; });
+      : conglomerates.filter((cg) => {
+          const s = sections.find((x) => x.cg === cg.id || (x.cgs || []).includes(cg.id));   // 다중 앵커 섹션(반도체=삼성+하이닉스)
+          return s && s.key === section;
+        });
     const cgIds = new Set(cgs.map((cg) => cg.id));
     cgs.forEach((cg) => nodes.push({ id: cg.id, name: cg.name, type: 'hub', signal: cg.signal }));
     companies.forEach((c) => {
@@ -50,6 +53,13 @@ function A4Network3D({ onSelectCompany, mode, setMode, focusCg }) {
         byTier[t].forEach((c, i) => {
           links.push({ source: parents ? parents[i % parents.length].id : cg.id, target: c.id, tier: t });
         });
+      });
+    });
+    // 실 공급망 교차 연결 — 한 협력사가 두 앵커(삼성·하이닉스)와 모두 거래하는 경우
+    companies.forEach((c) => {
+      if (!cgIds.has(c.parent)) return;
+      (c.crossCgs || []).forEach((cgid) => {
+        if (cgIds.has(cgid)) links.push({ source: cgid, target: c.id, tier: c.tier || 1 });
       });
     });
     return { nodes, links };

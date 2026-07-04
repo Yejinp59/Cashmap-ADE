@@ -350,7 +350,7 @@ function A4Network3D({ onSelectCompany, mode, setMode, focusCg }) {
             <p style={{ fontSize: 12.5, lineHeight: 1.7, color: '#9fb4c4', margin: '14px 0 16px' }}>{sel.summary}</p>
 
             <button className="ng-cta" style={{ background: NG_NEON[sel.grade] }} onClick={() => onSelectCompany(sel.id)}>
-              상세 리포트 열기 <GIcon name="arrow" size={15} />
+              상세 정보 보기 <GIcon name="arrow" size={15} />
             </button>
           </div>
         )}

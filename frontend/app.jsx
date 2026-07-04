@@ -115,7 +115,7 @@ function A4App() {
           {route === 'reverse' && <GReverse onSelectCompany={setSelected} />}
         </div>
 
-        <GDetail companyId={selected} onClose={() => setSelected(null)} onOpenNetwork={openNetwork} />
+        <GDetail companyId={selected} onClose={() => setSelected(null)} onOpenNetwork={openNetwork} onOpenCompany={openCompanyDash} />
       </div>
 
       <nav className="g-mobnav">

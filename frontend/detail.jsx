@@ -1,18 +1,16 @@
 /* ============================================================================
  *  3안 기업 상세  —  슬라이드 패널, 친절한 설명 + 도넛 + 피처 카드
  * ========================================================================== */
-function GDetail({ companyId, onClose, onOpenNetwork }) {
+function GDetail({ companyId, onClose, onOpenNetwork, onOpenCompany }) {
   const { GIcon, GPill, GDonut, GTrend, Term, gColor, gSoft } = window.G;
   const c = companyId ? window.ADE.byId[companyId] : null;
   const open = !!companyId;
-  const [report, setReport] = useState(null);
   const [showDz, setShowDz] = useState(false);
   const DZModal = window.DisclosureModal;
-  useEffect(() => { setReport(null); setShowDz(false); }, [companyId]);
+  useEffect(() => { setShowDz(false); }, [companyId]);
 
   const cg = c ? window.ADE.cgById[c.parent] : null;
   const meta = window.ADE.featureMeta;
-  const gen = () => { setReport('loading'); setTimeout(() => setReport('done'), 1200); };
 
   return (
     <React.Fragment>
@@ -83,22 +81,11 @@ function GDetail({ companyId, onClose, onOpenNetwork }) {
                 </div>
               </div>
 
-              {report === 'done' && (
-                <div style={{ padding: '0 24px 20px' }} className="g-up">
-                  <div className="g-card" style={{ borderColor: 'color-mix(in srgb, var(--g-brand) 30%, transparent)' }}>
-                    <div className="g-card-hd" style={{ padding: '14px 18px' }}><GIcon name="doc" size={17} /><h3 style={{ fontSize: 14 }}>RM 영업 리포트 (초안)</h3></div>
-                    <div className="g-card-pad tx-2" style={{ fontSize: 13, lineHeight: 1.75, padding: '16px 18px' }}>
-                      <p style={{ margin: '0 0 9px' }}><b style={{ color: 'var(--tx)' }}>추천 액션 ·</b> {c.grade === 'POSITIVE' ? '지금 선제 여신을 제안하기 좋은 시점입니다. RM 접촉 우선순위를 올리세요.' : c.grade === 'NEGATIVE' ? '여신감리팀과 공유하고 한도를 다시 점검하길 권합니다.' : '아직은 추세를 지켜보고 한 달 뒤 다시 평가하세요.'}</p>
-                      <p style={{ margin: 0 }}><b style={{ color: 'var(--tx)' }}>근거 ·</b> {cg.name}의 {cg.theme} 흐름에서 {c.tier}차 수혜가 예상되며, 행동 지표가 공시 대비 {c.discrepancy >= 0 ? `${c.discrepancy}p 앞섭니다` : `${Math.abs(c.discrepancy)}p 뒤처집니다`}.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div style={{ padding: '16px 24px', borderTop: '1px solid var(--line-2)', display: 'flex', gap: 10 }}>
-              <button className="g-btn primary" style={{ flex: 1 }} onClick={gen} disabled={report === 'loading'}>
-                <GIcon name="doc" size={17} />{report === 'loading' ? '작성 중…' : report === 'done' ? '다시 작성' : 'RM 리포트 만들기'}
+              <button className="g-btn primary" style={{ flex: 1 }} onClick={() => onOpenCompany && onOpenCompany(c.id)}>
+                <GIcon name="home" size={17} />기업 대시보드 열기
               </button>
               {onOpenNetwork && <button className="g-btn" onClick={() => onOpenNetwork(c.parent, c.id)} title="공급망에서 보기"><GIcon name="network" size={17} /></button>}
             </div>

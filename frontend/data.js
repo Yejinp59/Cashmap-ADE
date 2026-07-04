@@ -698,8 +698,11 @@
     });
 
     let added = 0;
-    Object.keys(byName).forEach((name) => {
-      const { ds, edge, customers } = byName[name];
+    // 차수 오름차순으로 생성 — 2·3차는 상위 협력사(1·2차)가 먼저 만들어져 있어야 체인 연결 가능
+    const realByName = {};   // corp_name → 생성된 회사 객체 (상위 체인 해석용)
+    const entries = Object.keys(byName).map((n) => ({ _name: n, ...byName[n] }));
+    entries.sort((a, b) => ((a.edge && a.edge.tier) || 1) - ((b.edge && b.edge.tier) || 1));
+    entries.forEach(({ _name: name, ds, edge, customers }) => {
       const id = 'real-' + (ds ? ds.corp_code : name);
       if (byId[id]) return;
       const scored = !!(ds && ds.d_score != null);
@@ -707,15 +710,22 @@
       const rr = ds ? (ds.rd_ratio || 0) * 100 : 0, rg = ds ? (ds.rd_growth || 0) * 100 : 0;
       const ms = ds ? (ds.op_margin_slope || 0) * 100 : 0, ig = ds ? (ds.inventor_count_yoy || 0) * 100 : 0;
       const dash = f('–', 8);                     // 미산출 지표 표시
-      // 주 소속 = 연결강도가 가장 센 앵커 (엣지 없으면 첫 앵커), 나머지 고객은 교차 연결로 보존
-      const primaryCg = (edge && cgIdByAnchorName[edge.parent_corp]) || CG;
+      // 주 소속: 1차 = 연결강도 최강 앵커 / 2·3차 = 상위 협력사의 앵커를 물려받고 upstreamId 로 실제 체인 연결
+      let primaryCg = CG, upstreamId = null;
+      if (edge && cgIdByAnchorName[edge.parent_corp]) {
+        primaryCg = cgIdByAnchorName[edge.parent_corp];
+      } else if (edge && realByName[edge.parent_corp]) {
+        const up = realByName[edge.parent_corp];
+        upstreamId = up.id;
+        primaryCg = up.parent;
+      }
       const crossCgs = (customers || [])
         .map((n) => cgIdByAnchorName[n])
         .filter((cgid) => cgid && cgid !== primaryCg);
       const c = {
         id, name,
         sector: '반도체 협력사' + (scored ? '' : ' · D-Score 대기'),
-        listed: true, parent: primaryCg, crossCgs, tier: edge ? (edge.tier || 1) : 1,
+        listed: true, parent: primaryCg, crossCgs, upstreamId, tier: edge ? (edge.tier || 1) : 1,
         dScore, grade: scored ? (ds.grade || 'MONITOR') : 'MONITOR',
         signal: anchorSig,
         // 실 괴리 지표는 AI-A 산출 대기 — 그때까지 등급 기반 근사(데모 보강)
@@ -739,7 +749,7 @@
           : `실 공급망 등록 기업 (연결강도 ${edge ? edge.edge_weight : '-'} · 고객 ${(customers || []).join('·')}) — D-Score는 AI-B 산출 대기, 표시 점수는 연결강도 기반 잠정치.`,
         updatedAt: (ds && ds.updated_at) || (edge && edge.created_at) || new Date().toISOString(),
       };
-      companies.push(c); byId[id] = c; pipelinePool.push(id); added++;
+      companies.push(c); byId[id] = c; realByName[name] = c; pipelinePool.push(id); added++;
     });
 
     // ── 4) 집계·경보·역방향 랭킹을 새 구성으로 재계산 ──

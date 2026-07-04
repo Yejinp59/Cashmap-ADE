@@ -41,6 +41,7 @@ function A4Network3D({ onSelectCompany, mode, setMode, focusCg }) {
       if (!cgIds.has(c.parent)) return;
       nodes.push({ id: c.id, name: c.name, type: 'node', grade: c.grade, tier: c.tier, parent: c.parent });
     });
+    const nodeIds = new Set(nodes.map((n) => n.id));
     // 사슬 구조: 대기업 → 1차 → 2차 → 3차.
     // 데이터엔 협력사가 '대기업 소속 + 차수'로만 들어와(상위 협력사 지정 없음),
     // 같은 대기업 안에서 차수별로 묶어 바로 위 차수 노드에 분배 연결한다.
@@ -51,7 +52,10 @@ function A4Network3D({ onSelectCompany, mode, setMode, focusCg }) {
       [2, 3].forEach((t) => {
         const parents = byTier[t - 1].length ? byTier[t - 1] : (byTier[1].length ? byTier[1] : null);
         byTier[t].forEach((c, i) => {
-          links.push({ source: parents ? parents[i % parents.length].id : cg.id, target: c.id, tier: t });
+          // 실 공급망(upstreamId)이 있으면 실제 상위 협력사에, 없으면(목업) 차수별 분배 연결
+          const up = (c.upstreamId && nodeIds.has(c.upstreamId)) ? c.upstreamId
+                   : (parents ? parents[i % parents.length].id : cg.id);
+          links.push({ source: up, target: c.id, tier: t });
         });
       });
     });

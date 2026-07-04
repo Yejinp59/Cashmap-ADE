@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* CashMap × ADE — Light theme (V0 디자인 기반, oklch 색공간) */
+  --background: oklch(0.97 0.005 250);
+  --foreground: oklch(0.15 0.02 250);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.02 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.02 250);
+  --primary: oklch(0.45 0.15 240);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0.005 250);
+  --secondary-foreground: oklch(0.25 0.02 250);
+  --muted: oklch(0.94 0.005 250);
+  --muted-foreground: oklch(0.5 0.02 250);
+  --accent: oklch(0.55 0.16 145);
+  --accent-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.9 0.005 250);
+  --input: oklch(0.94 0.005 250);
+  --ring: oklch(0.45 0.15 240);
+
+  --chart-1: oklch(0.55 0.18 240);
+  --chart-2: oklch(0.55 0.16 145);
+  --chart-3: oklch(0.55 0.2 25);
+  --chart-4: oklch(0.6 0.15 75);
+  --chart-5: oklch(0.5 0.15 300);
+
+  --success: oklch(0.55 0.16 145);
+  --success-foreground: oklch(0.99 0 0);
+  --success-muted: oklch(0.92 0.06 145);
+  --warning: oklch(0.6 0.15 75);
+  --warning-foreground: oklch(0.3 0.1 75);
+  --warning-muted: oklch(0.94 0.06 75);
+  --danger: oklch(0.55 0.2 25);
+  --danger-foreground: oklch(0.99 0 0);
+  --danger-muted: oklch(0.94 0.06 25);
+  --info: oklch(0.55 0.18 240);
+  --info-foreground: oklch(0.99 0 0);
+  --info-muted: oklch(0.92 0.06 240);
+
+  --radius: 0.75rem;
+
+  --sidebar: oklch(0.99 0 0);
+  --sidebar-foreground: oklch(0.15 0.02 250);
+  --sidebar-primary: oklch(0.45 0.15 240);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.96 0.005 250);
+  --sidebar-accent-foreground: oklch(0.15 0.02 250);
+  --sidebar-border: oklch(0.9 0.005 250);
+  --sidebar-ring: oklch(0.45 0.15 240);
+}
+
+.dark {
+  --background: oklch(0.13 0.02 250);
+  --foreground: oklch(0.95 0.005 250);
+  --card: oklch(0.17 0.02 250);
+  --card-foreground: oklch(0.95 0.005 250);
+  --popover: oklch(0.17 0.02 250);
+  --popover-foreground: oklch(0.95 0.005 250);
+  --primary: oklch(0.6 0.15 240);
+  --primary-foreground: oklch(0.13 0.02 250);
+  --secondary: oklch(0.22 0.02 250);
+  --secondary-foreground: oklch(0.95 0.005 250);
+  --muted: oklch(0.22 0.02 250);
+  --muted-foreground: oklch(0.65 0.02 250);
+  --accent: oklch(0.6 0.16 145);
+  --accent-foreground: oklch(0.13 0.02 250);
+  --destructive: oklch(0.5 0.2 25);
+  --destructive-foreground: oklch(0.95 0.005 250);
+  --border: oklch(0.25 0.02 250);
+  --input: oklch(0.22 0.02 250);
+  --ring: oklch(0.6 0.15 240);
+
+  --chart-1: oklch(0.6 0.18 240);
+  --chart-2: oklch(0.6 0.16 145);
+  --chart-3: oklch(0.55 0.2 25);
+  --chart-4: oklch(0.65 0.15 75);
+  --chart-5: oklch(0.55 0.15 300);
+
+  --success: oklch(0.6 0.16 145);
+  --success-foreground: oklch(0.13 0.02 250);
+  --success-muted: oklch(0.25 0.08 145);
+  --warning: oklch(0.65 0.15 75);
+  --warning-foreground: oklch(0.13 0.02 250);
+  --warning-muted: oklch(0.25 0.08 75);
+  --danger: oklch(0.55 0.2 25);
+  --danger-foreground: oklch(0.95 0.005 250);
+  --danger-muted: oklch(0.25 0.08 25);
+  --info: oklch(0.6 0.18 240);
+  --info-foreground: oklch(0.13 0.02 250);
+  --info-muted: oklch(0.25 0.08 240);
+
+  --sidebar: oklch(0.15 0.02 250);
+  --sidebar-foreground: oklch(0.95 0.005 250);
+  --sidebar-primary: oklch(0.6 0.15 240);
+  --sidebar-primary-foreground: oklch(0.13 0.02 250);
+  --sidebar-accent: oklch(0.22 0.02 250);
+  --sidebar-accent-foreground: oklch(0.95 0.005 250);
+  --sidebar-border: oklch(0.25 0.02 250);
+  --sidebar-ring: oklch(0.6 0.15 240);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', system-ui, -apple-system, 'Noto Sans KR', sans-serif;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--muted-foreground); border-radius: 3px; opacity: 0.3; }
+::-webkit-scrollbar-thumb:hover { opacity: 0.5; }

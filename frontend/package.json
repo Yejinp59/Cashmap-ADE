@@ -1,0 +1,10 @@
+{
+  "name": "cashmap-frontend-newdesign",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CashMap x ADE 새 디자인 프론트 (빌드 없는 정적 HTML + Babel-in-browser). 기존 TS앱은 version1/ 참고.",
+  "scripts": {
+    "start": "npx --yes serve -l 3000 .",
+    "serve": "npx --yes serve -l 3000 ."
+  }
+}

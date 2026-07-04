@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+alembic
+pgvector
+pydantic-settings
+apscheduler
+python-jose[cryptography]
+passlib[bcrypt]
+requests
+reportlab

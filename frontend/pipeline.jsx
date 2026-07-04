@@ -108,11 +108,6 @@ function GPipeline({ user, onOpenCompany, favs, toggleFav }) {
                     <div className="g-kcard-main">
                       <div className="g-kcard-top">
                         <span className="g-kcard-name">{it.name}</span>
-                        <button className={`g-favbtn g-kfav ${favSet.has(it.id) ? 'on' : ''}`}
-                          title={favSet.has(it.id) ? '즐겨찾기 해제' : '즐겨찾기'}
-                          onClick={(e) => { e.stopPropagation(); toggleFav && toggleFav(it.id); }}>
-                          <GIcon name={favSet.has(it.id) ? 'star-fill' : 'star'} size={14} />
-                        </button>
                         <span className="g-kscore-badge g-mono">{it.dScore}</span>
                       </div>
                       <div className="g-kcard-sub">{it.cgName} · {it.tier}차 · {it.sector}</div>
@@ -127,7 +122,15 @@ function GPipeline({ user, onOpenCompany, favs, toggleFav }) {
                           : <span className="g-klast" style={{ opacity: .6 }}><GIcon name="clock" size={12} />미접촉</span>}
                       </div>
                     </div>
-                    <span className="g-kdrag"><GIcon name="drag" size={15} /></span>
+                    {/* 우측 레일: 드래그 핸들(점 6개) 아래 즐겨찾기 별 */}
+                    <div className="g-kside">
+                      <span className="g-kdrag"><GIcon name="drag" size={15} /></span>
+                      <button className={`g-favbtn g-kfav ${favSet.has(it.id) ? 'on' : ''}`}
+                        title={favSet.has(it.id) ? '즐겨찾기 해제' : '즐겨찾기'}
+                        onClick={(e) => { e.stopPropagation(); toggleFav && toggleFav(it.id); }}>
+                        <GIcon name={favSet.has(it.id) ? 'star-fill' : 'star'} size={15} />
+                      </button>
+                    </div>
                   </article>
                 ))}
                 {list.length === 0 && (

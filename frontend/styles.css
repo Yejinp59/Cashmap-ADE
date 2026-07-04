@@ -799,3 +799,6 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2c3845; }
 
 /* 칸반 카드 안 즐겨찾기 별 (컴팩트) */
 .g-kfav { padding: 2px 3px; flex: none; }
+
+/* 칸반 카드 우측 레일 — 드래그 핸들 아래 즐겨찾기 별 */
+.g-kside { display: flex; flex-direction: column; align-items: center; gap: 7px; flex: none; }

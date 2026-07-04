@@ -362,7 +362,6 @@ function RMReportSide({ c, cg, sec, r, gc, gradeLabel, busy, memo, onMemo }) {
   const start = Math.max(0, Math.min(rank - 3, total - 6));   // 현재 기업이 보이도록 6개 창
   const view = peers.slice(start, start + 6);
   const modelReal = r.model && r.model !== 'fallback';
-  const toc = [['01', '결론'], ['02', '핵심 진단'], ['03', '추천 액션'], ['04', '근거'], ['05', '공급망 내 비교'], ['06', '리스크·주의'], ['07', 'RM 메모']];
 
   return (
     <aside className="rm-side">
@@ -374,21 +373,6 @@ function RMReportSide({ c, cg, sec, r, gc, gradeLabel, busy, memo, onMemo }) {
           <div><span>생성 엔진</span><b>{modelReal ? r.model : '룰베이스'}</b></div>
           <div><span>생성 시각</span><b>{r.generatedAt}</b></div>
           <div><span>데이터 기준</span><b>야간 배치 · 매일 02:00</b></div>
-        </div>
-      </div>
-
-      {/* 핵심 스냅샷 */}
-      <div className="rm-side-card">
-        <div className="rm-side-hd"><GIcon name="grid" size={14} /><span>핵심 스냅샷</span></div>
-        <div className="rm-snap-main" style={{ '--gc': gc }}>
-          <div className="rm-snap-v">{c.dScore}</div>
-          <div className="rm-snap-l">D-Score · {gradeLabel}</div>
-        </div>
-        <div className="rm-snap-grid">
-          <div><span>공시-행동 괴리</span><b style={{ color: gc }}>{c.discrepancy >= 0 ? '+' : ''}{c.discrepancy}p</b></div>
-          <div><span>섹션 신호강도</span><b>{cg.signal}</b></div>
-          <div><span>소속 섹션</span><b>{sec.label}</b></div>
-          <div><span>공급망 위치</span><b>{c.tier}차 협력사</b></div>
         </div>
       </div>
 
@@ -406,8 +390,8 @@ function RMReportSide({ c, cg, sec, r, gc, gradeLabel, busy, memo, onMemo }) {
         </div>
       )}
 
-      {/* 같은 공급망 동종기업 */}
-      <div className="rm-side-card">
+      {/* 같은 공급망 동종기업 — 남는 세로 공간을 채우고 내부 스크롤 */}
+      <div className="rm-side-card rm-side-fill">
         <div className="rm-side-hd"><GIcon name="network" size={14} /><span>{cg.name} 공급망 내 비교</span></div>
         <div className="rm-rank-line">D-Score 순위 <b style={{ color: gc }}>{rank}위</b> <span>/ {total}개사</span></div>
         <div className="rm-peers">
@@ -426,13 +410,6 @@ function RMReportSide({ c, cg, sec, r, gc, gradeLabel, busy, memo, onMemo }) {
         </div>
       </div>
 
-      {/* 문서 목차 */}
-      <div className="rm-side-card">
-        <div className="rm-side-hd"><GIcon name="doc" size={14} /><span>문서 목차</span></div>
-        <div className="rm-toc">
-          {toc.map(([n, t]) => <div className="rm-toc-i" key={n}><span className="g-mono">{n}</span>{t}</div>)}
-        </div>
-      </div>
     </aside>
   );
 }

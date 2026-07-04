@@ -604,7 +604,8 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2c3845; }
 .rm-pages { width: calc(720px * var(--z, 1)); flex: none; transition: width .16s var(--g-ease); }
 
 /* 인라인 리더기 (RM 리포트 생성 탭) */
-.rm-inline { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+/* overflow:hidden 은 sticky(사이드 따라오기)를 무력화 → clip 은 시각적 클리핑만 하고 sticky 유지 */
+.rm-inline { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: clip; }
 .rm-toolbar-inline { position: sticky; top: 0; z-index: 6; background: var(--bg-soft); border-bottom: 1px solid var(--line); }
 .rm-toolbar-inline .rm-fileic { background: var(--g-brand-soft); color: var(--brand-tx); }
 .rm-toolbar-inline .rm-fname { color: var(--tx); }
@@ -622,7 +623,14 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2c3845; }
 /* 문서 + 우측 정보 패널 2단 레이아웃 */
 .rm-body { display: flex; align-items: flex-start; gap: 22px; flex-wrap: nowrap; }   /* 사이드가 아래로 밀리지 않게 */
 .rm-stage-inline .rm-body > .rm-pages { margin: 0; }
-.rm-side { flex: 0 0 280px; width: 280px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 16px; align-self: flex-start; }
+.rm-side {
+  flex: 0 0 280px; width: 280px; display: flex; flex-direction: column; gap: 14px;
+  position: sticky; top: 14px; align-self: flex-start;
+  /* 화면 세로에 맞춤 — 스크롤해도 3개 블록(AI 정보·RM 메모·비교)이 항상 보인다 */
+  max-height: calc(100vh - 96px);
+}
+.rm-side-fill { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.rm-side-fill .rm-peers { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 /* 좁은 화면에서만 사이드가 문서 아래로 자연스럽게 내려가도록 허용 */
 @media (max-width: 1100px) {
   .rm-body { flex-wrap: wrap; }

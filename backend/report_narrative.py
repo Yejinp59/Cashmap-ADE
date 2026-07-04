@@ -234,7 +234,7 @@ def _build_prompt(d: ReportData) -> str:
         "형식과 각 항목의 분량·요건:\n"
         '{\n'
         '  "headline": "한 문장. 기업명, 판단(숨은 진주/거품/중립), RM 함의를 담은 핵심 결론",\n'
-        '  "diagnosis": "4~6문장의 한 문단. 특허 수·R&D 비중·R&D 성장률·발명자 증감률·IPC Entropy·영업이익률 기울기 중 최소 3개 수치를 직접 인용하고, 왜 이 등급인지(공시-행동 괴리 관점 포함)를 인과적으로 설명",\n'
+        '  "diagnosis": "반드시 5~7문장의 한 문단(5문장 미만 금지). 특허 수·R&D 비중·R&D 성장률·발명자 증감률·IPC Entropy·영업이익률 기울기 중 최소 3개 수치를 직접 인용하고, 왜 이 등급인지(공시-행동 괴리 관점 포함)를 인과적으로 설명",\n'
         '  "action": "3~4문장의 한 문단. RM이 취할 핵심 행동을 무엇을·언제·어떻게 관점으로 서술하되, 적합한 여신 상품(운전자금/시설자금 등)과 컨택 타이밍, 타행 선점 관점을 문장 속에 자연스럽게 녹일 것. 절대 번호 목록으로 나열하지 말 것",\n'
         '  "rationale": "2~3문장의 한 문단. 위 진단과 액션을 뒷받침하는 정량 근거를 수치와 함께 제시",\n'
         '  "risk": "2~3문장의 한 문단. 핵심 리스크와 RM이 관찰해야 할 모니터링 포인트를 구체적으로 명시"\n'
@@ -435,11 +435,63 @@ def build_reverse_interpretation(query: str, sectors: list) -> dict:
     return {"keywords": [], "sector_key": None, "rationale": None, "model": "fallback"}
 
 
+_SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
+
+
+def _sent_count(text: str) -> int:
+    return len([s for s in _SENT_SPLIT.split(text or "") if s.strip()])
+
+
+def _pad_diagnosis(d: ReportData, text: str, min_sent: int = 5) -> str:
+    """핵심 진단 최소 5문장 보장 — 룰베이스 폴백(신호 이력 없는 기업은 1문장까지 줄었음)과
+    소형 LLM의 축약 출력 모두 방어. 프론트가 보낸 구조화 신호(extra_facts)로 문장을 보강한다."""
+    out = (text or "").strip()
+    ef = list(d.extra_facts or [])
+
+    def find(key, exclude=None):
+        for x in ef:
+            if key in x and (exclude is None or exclude not in x):
+                return x
+        return None
+
+    add = []
+    anchor = find("발신 대기업")
+    tier = find("공급망 위치")
+    if anchor:
+        a = anchor.replace("발신 대기업: ", "")
+        t = tier.split(": ")[1] if tier and ": " in tier else "협력사"
+        add.append(f"{a} 생태계의 {t}로, 대기업 발신 신호의 직접 영향권에 있습니다.")
+    nums = [x for x in ef
+            if re.search(r"\d", x) and not any(k in x for k in ("발신", "위치", "제목", "괴리", "최근 공시", "중 D-Score"))]
+    if nums:
+        add.append("핵심 행동지표는 " + ", ".join(nums[:3]) + " 수준으로 집계됩니다.")
+    disc = find("공시-행동 괴리")
+    if disc:
+        add.append(disc.split(" (")[0] + "가 관측되어, 말(공시)과 행동(특허·투자)의 간극이 판단의 핵심 변수입니다.")
+    mix = find("최근 공시")
+    if mix:
+        add.append(mix + "의 구성을 보입니다.")
+    rank = find("중 D-Score")
+    if rank:
+        add.append(rank + "로, 동종 협력사 대비 상대 위치도 함께 볼 필요가 있습니다.")
+
+    for s in add:
+        if _sent_count(out) >= min_sent:
+            break
+        if s and s not in out:
+            out = (out + " " + s).strip()
+    return out
+
+
 def build_narrative(d: ReportData, use_llm: bool = True) -> Tuple[dict, str]:
     """(sections, model) 반환. LLM 우선, 실패 시 룰베이스 fallback.
-    model 은 생성 출처('exaone3.5:2.4b' 또는 'fallback')."""
+    model 은 생성 출처('exaone3.5:2.4b' 또는 'fallback').
+    어느 경로든 diagnosis 는 최소 5문장을 보장한다."""
     if use_llm:
         sections = build_narrative_llm(d)
         if sections:
+            sections["diagnosis"] = _pad_diagnosis(d, sections.get("diagnosis") or "")
             return sections, OLLAMA_MODEL
-    return build_narrative_fallback(d), "fallback"
+    sections = build_narrative_fallback(d)
+    sections["diagnosis"] = _pad_diagnosis(d, sections.get("diagnosis") or "")
+    return sections, "fallback"

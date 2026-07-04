@@ -146,6 +146,96 @@ function RMPeerChart({ peers }) {
   );
 }
 
+/* ── RM 편집·하이라이트 문단 ─────────────────────────────────────────
+ * "초안은 AI가, 최종은 RM이" — 문단별 ✏수정 · 드래그 🖍형광펜 · ↺초안 복원.
+ * 자동 하이라이트: 수치·등급·액션 키워드를 룰베이스 정규식으로 즉시 강조
+ * (Ollama 재호출 없음 → 리포트 45건×매일이어도 비용·지연 0).
+ * 저장: localStorage cashmap.rmedit.<companyId> = { [섹션]: { text?, hls: [] } } */
+const RM_AUTO_HL = /([+\-−]?\d+(?:[.,]\d+)?\s*(?:p|%|점|건|위|배|억|조|개사)|숨은 진주|거품 경보|선제 접촉|선제 미팅|선제 영업|한도 확대|한도 재점검|보수적|괴리|상향|하향|급증|급감|역성장)/g;
+
+function rmEditLoad(companyId) {
+  try { return JSON.parse(localStorage.getItem('cashmap.rmedit.' + companyId) || '{}'); } catch (e) { return {}; }
+}
+function rmEditSave(companyId, data) {
+  try { localStorage.setItem('cashmap.rmedit.' + companyId, JSON.stringify(data)); } catch (e) {}
+}
+
+/* 수동 형광펜(문자열 매칭)으로 먼저 나눈 뒤, 일반 구간에만 자동 하이라이트 적용 */
+function rmRenderSegs(text, hls, onRemoveHl) {
+  let segs = [{ t: String(text || ''), u: false }];
+  (hls || []).forEach((h) => {
+    if (!h) return;
+    const next = [];
+    segs.forEach((s) => {
+      if (s.u) { next.push(s); return; }
+      let rest = s.t, i;
+      while ((i = rest.indexOf(h)) >= 0) {
+        if (i > 0) next.push({ t: rest.slice(0, i), u: false });
+        next.push({ t: h, u: true });
+        rest = rest.slice(i + h.length);
+      }
+      if (rest) next.push({ t: rest, u: false });
+    });
+    segs = next;
+  });
+  const out = [];
+  segs.forEach((s, si) => {
+    if (s.u) {
+      out.push(<mark key={'u' + si} className="rm-hl-user" title="클릭하면 형광펜 해제" onClick={() => onRemoveHl && onRemoveHl(s.t)}>{s.t}</mark>);
+      return;
+    }
+    String(s.t).split(RM_AUTO_HL).forEach((p, pi) => {
+      if (!p) return;
+      out.push(pi % 2
+        ? <mark key={si + '-' + pi} className="rm-hl-auto">{p}</mark>
+        : <React.Fragment key={si + '-' + pi}>{p}</React.Fragment>);
+    });
+  });
+  return out;
+}
+
+function RMEditableP({ companyId, sec, draft, className, style }) {
+  const [store, setStore] = useState(() => rmEditLoad(companyId));
+  const [editing, setEditing] = useState(false);
+  useEffect(() => { setStore(rmEditLoad(companyId)); setEditing(false); }, [companyId, draft]);
+  const cur = store[sec] || {};
+  const text = cur.text != null ? cur.text : draft;
+  const dirty = cur.text != null || (cur.hls || []).length > 0;
+  const patch = (p) => {
+    const next = { ...store, [sec]: { ...cur, ...p } };
+    setStore(next); rmEditSave(companyId, next);
+  };
+  const doHl = () => {
+    const sel = window.getSelection();
+    const t = sel ? String(sel).trim() : '';
+    if (!t || String(text).indexOf(t) < 0) return;
+    patch({ hls: (cur.hls || []).concat(t) });
+    sel.removeAllRanges();
+  };
+  const removeHl = (h) => patch({ hls: (cur.hls || []).filter((x) => x !== h) });
+  const reset = () => {
+    const next = { ...store }; delete next[sec];
+    setStore(next); rmEditSave(companyId, next); setEditing(false);
+  };
+  return (
+    <div className="rm-edit-wrap">
+      {editing ? (
+        <textarea className="rm-edit-ta" value={text} autoFocus rows={Math.max(3, Math.ceil(String(text).length / 55))}
+          onChange={(e) => patch({ text: e.target.value })}
+          onBlur={() => setEditing(false)} />
+      ) : (
+        <p className={className || 'rm-p'} style={style}>{rmRenderSegs(text, cur.hls, removeHl)}</p>
+      )}
+      <span className="rm-edit-tools rm-noprint">
+        <button title="드래그한 부분 형광펜" onMouseDown={(e) => e.preventDefault()} onClick={doHl}>🖍</button>
+        <button title="문단 직접 수정" onMouseDown={(e) => e.preventDefault()} onClick={() => setEditing(true)}>✏️</button>
+        {dirty && <button title="AI 초안으로 복원" onClick={reset}>↺</button>}
+      </span>
+      {cur.text != null && <span className="rm-edited-badge rm-noprint">RM 수정본</span>}
+    </div>
+  );
+}
+
 /* ── 종이 페이지 (공용) ─────────────────────────────────────────────── */
 function RMReportPages({ c, cg, sec, r, gc, gradeLabel, dateStr, total, activePage, continuous, memo }) {
   const { GIcon } = window.G;
@@ -201,12 +291,12 @@ function RMReportPages({ c, cg, sec, r, gc, gradeLabel, dateStr, total, activePa
 
         <section className="rm-sec">
           <h2 className="rm-h2"><span>01</span>결론</h2>
-          <p className="rm-p" style={{ fontWeight: 600, color: '#0d1620' }}>{r.headline}</p>
+          <RMEditableP companyId={c.id} sec="headline" draft={r.headline} style={{ fontWeight: 600, color: '#0d1620' }} />
         </section>
 
         <section className="rm-sec">
           <h2 className="rm-h2"><span>02</span>핵심 진단</h2>
-          <p className="rm-p">{r.diagnosis}</p>
+          <RMEditableP companyId={c.id} sec="diagnosis" draft={r.diagnosis} />
         </section>
 
         <div className="rm-foot"><span>NOVA RM Report</span><span>1 / {total}</span></div>
@@ -223,13 +313,13 @@ function RMReportPages({ c, cg, sec, r, gc, gradeLabel, dateStr, total, activePa
           <h2 className="rm-h2"><span>03</span>추천 액션</h2>
           <div className="rm-action" style={{ borderColor: gc, background: `color-mix(in srgb, ${gc} 7%, transparent)` }}>
             <span className="rm-action-ic" style={{ background: gc }}><GIcon name="spark" size={16} /></span>
-            <p className="rm-p" style={{ margin: 0 }}>{r.action}</p>
+            <RMEditableP companyId={c.id} sec="action" draft={r.action} style={{ margin: 0 }} />
           </div>
         </section>
 
         <section className="rm-sec">
           <h2 className="rm-h2"><span>04</span>근거</h2>
-          <p className="rm-p">{r.basis}</p>
+          <RMEditableP companyId={c.id} sec="basis" draft={r.basis} />
         </section>
 
         <section className="rm-sec">
@@ -240,7 +330,7 @@ function RMReportPages({ c, cg, sec, r, gc, gradeLabel, dateStr, total, activePa
 
         <section className="rm-sec">
           <h2 className="rm-h2"><span>06</span>리스크·주의</h2>
-          <p className="rm-p">{r.risk}</p>
+          <RMEditableP companyId={c.id} sec="risk" draft={r.risk} />
         </section>
 
         <section className="rm-sec">

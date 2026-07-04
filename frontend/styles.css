@@ -688,9 +688,9 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2c3845; }
 .rm-score-v { font-family: var(--g-f-head); font-weight: 800; font-size: 40px; line-height: 1; color: var(--gc); }
 .rm-score-l { font-size: 10.5px; font-weight: 600; color: #5a6775; margin-top: 4px; }
 .rm-sec { margin-top: 26px; }
-.rm-h2 { display: flex; align-items: center; gap: 10px; font-family: var(--g-f-head); font-weight: 700; font-size: 16px; color: #0d1620; margin: 0 0 11px; }
+.rm-h2 { display: flex; align-items: center; gap: 10px; font-family: var(--g-f-head); font-weight: 700; font-size: 17px; color: #0d1620; margin: 0 0 11px; }
 .rm-h2 span { font-family: var(--g-f-mono); font-size: 12px; font-weight: 600; color: #fff; background: #0a8a8a; width: 26px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
-.rm-p { font-size: 13.5px; line-height: 1.85; color: #33414f; margin: 0; }
+.rm-p { font-size: 14.5px; line-height: 1.8; color: #33414f; margin: 0; }
 .rm-kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
 .rm-kv > div { background: #f5f8fa; border-radius: 9px; padding: 12px 14px; }
 .rm-kv span { display: block; font-size: 11px; color: #7c8896; margin-bottom: 5px; }
@@ -767,6 +767,7 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2c3845; }
   body.rm-printing .rm-reader, body.rm-printing .rm-inline { width: 100%; height: auto; background: #fff; border: none; }
   body.rm-printing .rm-stage { overflow: visible !important; height: auto !important; padding: 0; display: block; }
   body.rm-printing .rm-side { display: none !important; }
+  body.rm-printing .rm-noprint { display: none !important; }   /* 편집 툴바·배지는 인쇄 제외 */
   body.rm-printing .rm-body { display: block; }
   body.rm-printing .rm-pages { width: 100% !important; gap: 0 !important; display: block !important; }
   body.rm-printing .rm-page { display: flex !important; box-shadow: none; page-break-after: always; break-inside: avoid; width: 100%; }
@@ -814,3 +815,30 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2c3845; }
 
 /* 칸반 카드 우측 레일 — 드래그 핸들 아래 즐겨찾기 별 */
 .g-kside { display: flex; flex-direction: column; align-items: center; gap: 7px; flex: none; }
+
+/* ── RM 리포트 편집·하이라이트 ("초안은 AI, 최종은 RM") ─────────────── */
+.rm-hl-auto { background: rgba(0, 184, 122, .16); color: inherit; padding: 0 2px; border-radius: 3px; font-weight: 600; }
+.rm-hl-user { background: #ffe264; color: inherit; padding: 0 2px; border-radius: 3px; cursor: pointer; }
+.rm-hl-user:hover { background: #ffd21f; }
+.rm-edit-wrap { position: relative; }
+.rm-edit-tools {
+  position: absolute; top: -26px; right: 0; display: none; gap: 2px;
+  background: #fff; border: 1px solid #dfe6ec; border-radius: 8px; padding: 2px;
+  box-shadow: 0 4px 14px -6px rgba(0,0,0,.25); z-index: 5;
+}
+.rm-edit-wrap:hover .rm-edit-tools, .rm-edit-wrap:focus-within .rm-edit-tools { display: flex; }
+.rm-edit-tools button {
+  border: none; background: transparent; cursor: pointer; font-size: 13px;
+  width: 26px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+}
+.rm-edit-tools button:hover { background: #eef4f8; }
+.rm-edit-ta {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  font: 400 14.5px/1.8 'Noto Sans KR', sans-serif; color: #33414f;
+  border: 1.5px dashed #0a8a8a; border-radius: 8px; padding: 8px 10px;
+  background: #f6fbfa; outline: none;
+}
+.rm-edited-badge {
+  position: absolute; top: -24px; right: 96px; font-size: 10px; font-weight: 700;
+  color: #0a8a8a; background: #e3f4f0; border-radius: 6px; padding: 3px 8px; letter-spacing: .04em;
+}

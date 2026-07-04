@@ -773,7 +773,8 @@
     if (!window.CASHMAP_API_BASE && await _probe('/health', 1200)) {
       window.ADE.API_BASE = '';
     }
-    const ok = await _probe(window.ADE.API_BASE + '/health', 1500);
+    let ok = await _probe(window.ADE.API_BASE + '/health', 1500);
+    if (!ok) ok = await _probe(window.ADE.API_BASE + '/health', 3500);   // 서버가 LLM 생성 등으로 순간 바쁠 때 오프라인 오판 방지
     if (!ok) { window.ADE.online = false; window.ADE.source = 'mock'; return 'mock'; }
     window.ADE.online = true;
     let added = 0;

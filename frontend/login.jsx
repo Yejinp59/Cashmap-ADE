@@ -85,8 +85,8 @@ function GWordmark({ size = 30 }) {
         <path d="M13 13 17 17M27.5 14 22.5 18.5M26.5 27.5 22 22.5" stroke="var(--g-brand)" strokeOpacity=".5" strokeWidth="1.2"/>
       </svg>
       <div style={{ lineHeight: 1.05 }}>
-        <div className="g-head" style={{ fontSize: 18, fontWeight: 800 }}>Cash<span style={{ color: 'var(--brand-tx)' }}>Map</span></div>
-        <div className="g-mono tx-3" style={{ fontSize: 10, letterSpacing: '.14em' }}>×ADE</div>
+        <div className="g-head" style={{ fontSize: 18, fontWeight: 800 }}>NO<span style={{ color: 'var(--brand-tx)' }}>VA</span></div>
+        <div className="tx-3" style={{ fontSize: 8.5, letterSpacing: '.06em', whiteSpace: 'nowrap' }}>Network of Vendor Analytics</div>
       </div>
     </div>
   );

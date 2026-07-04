@@ -156,7 +156,7 @@ function RMReportPages({ c, cg, sec, r, gc, gradeLabel, dateStr, total, activePa
       <article className={`rm-page ${cls(1)}`} data-page="1">
         <div className="rm-doc-hd">
           <div>
-            <div className="rm-brand">하나금융 · CashMap</div>
+            <div className="rm-brand">하나금융 · NOVA</div>
             <h1 className="rm-doc-title">RM 영업 리포트</h1>
           </div>
           <div className="rm-doc-meta">
@@ -209,13 +209,13 @@ function RMReportPages({ c, cg, sec, r, gc, gradeLabel, dateStr, total, activePa
           <p className="rm-p">{r.diagnosis}</p>
         </section>
 
-        <div className="rm-foot"><span>CashMap RM Report</span><span>1 / {total}</span></div>
+        <div className="rm-foot"><span>NOVA RM Report</span><span>1 / {total}</span></div>
       </article>
 
       {/* ───────── PAGE 2 ───────── */}
       <article className={`rm-page ${cls(2)}`} data-page="2">
         <div className="rm-doc-hd slim">
-          <div className="rm-brand">하나금융 · CashMap — {c.name}</div>
+          <div className="rm-brand">하나금융 · NOVA — {c.name}</div>
           <div className="rm-doc-meta-inline">{dateStr}</div>
         </div>
 
@@ -285,7 +285,6 @@ function RMReportSide({ c, cg, sec, r, gc, gradeLabel, busy, memo, onMemo }) {
           <div><span>생성 시각</span><b>{r.generatedAt}</b></div>
           <div><span>데이터 기준</span><b>야간 배치 · 매일 02:00</b></div>
         </div>
-        <p className="rm-side-note">공시·특허·R&D 신호를 종합해 <b>사전 생성</b>된 제언입니다. 여신 결정의 단독 근거가 아닙니다.</p>
       </div>
 
       {/* 핵심 스냅샷 */}
@@ -314,7 +313,6 @@ function RMReportSide({ c, cg, sec, r, gc, gradeLabel, busy, memo, onMemo }) {
             placeholder="접촉 계획·특이사항·내부 코멘트를 적어두세요. 문서의 07 RM 메모 칸과 PDF 인쇄에 그대로 들어갑니다."
             onChange={(e) => onMemo(e.target.value)}
           />
-          <p className="rm-side-note">기업별로 이 브라우저에 자동 저장됩니다.</p>
         </div>
       )}
 
@@ -358,11 +356,28 @@ function RMReportInline({ companyId }) {
   const meta = window.ADE.featureMeta;
   const [zoom, setZoom] = useState(1);
   const { nar, busy, reanalyze } = useNarrative(companyId);
+  const stageRef = useRef(null);
+
+  // 화면 폭에 맞춰 문서(720px 기준)를 자동 확대.
+  // 사이드(280px 고정)+간격+여유 40px을 빼고 계산 → 우측 블록이 아래로 밀리지 않고 숨쉴 공간 유지.
+  // 탭이 display:none 으로 숨겨진 채 마운트되므로 ResizeObserver 로 '보이는 순간'을 잡는다.
+  const fitZoom = () => {
+    const el = stageRef.current;
+    if (!el || el.clientWidth < 200) return;          // 숨김 상태면 skip
+    const avail = el.clientWidth - 40 - 280 - 22 - 40;
+    setZoom(Math.max(1, Math.min(1.35, +(avail / 720).toFixed(2))));
+  };
+  useEffect(() => {
+    fitZoom();
+    const ro = new ResizeObserver(fitZoom);
+    if (stageRef.current) ro.observe(stageRef.current);
+    window.addEventListener('resize', fitZoom);
+    return () => { ro.disconnect(); window.removeEventListener('resize', fitZoom); };
+  }, [companyId]);
 
   // RM 메모 — 기업별 localStorage 저장, 문서 07 섹션·PDF 인쇄에 즉시 반영
   const [memo, setMemo] = useState('');
   useEffect(() => {
-    setZoom(1);
     try { setMemo(localStorage.getItem('cashmap.rmmemo.' + companyId) || ''); } catch (e) { setMemo(''); }
   }, [companyId]);
   const saveMemo = (v) => {
@@ -390,7 +405,7 @@ function RMReportInline({ companyId }) {
           <span className="rm-fileic"><GIcon name="doc" size={17} /></span>
           <div style={{ minWidth: 0 }}>
             <div className="rm-fname">RM영업리포트_{c.name}.pdf</div>
-            <div className="rm-fmeta">CashMap · {busy ? 'AI 생성 중…' : r.source} · {r.generatedAt}</div>
+            <div className="rm-fmeta">NOVA · {busy ? 'AI 생성 중…' : r.source} · {r.generatedAt}</div>
           </div>
         </div>
         <div className="rm-tb-right">
@@ -407,7 +422,7 @@ function RMReportInline({ companyId }) {
       </div>
 
       {/* ── 페이지 스테이지 (연속 스크롤) + 우측 정보 패널 ── */}
-      <div className={`rm-stage rm-stage-inline ${busy ? 'busy' : ''}`}>
+      <div className={`rm-stage rm-stage-inline ${busy ? 'busy' : ''}`} ref={stageRef}>
         <div className="rm-body">
           <div className="rm-pages" style={{ '--z': zoom }}>
             <RMReportPages c={c} cg={cg} sec={sec} r={r} gc={gc} gradeLabel={gradeLabel} dateStr={r.generatedAt} total={TOTAL} continuous memo={memo} />
@@ -460,7 +475,7 @@ function RMReportModal({ companyId, open, onClose }) {
             <span className="rm-fileic"><GIcon name="doc" size={17} /></span>
             <div style={{ minWidth: 0 }}>
               <div className="rm-fname">RM영업리포트_{c.name}.pdf</div>
-              <div className="rm-fmeta">CashMap · {busy ? 'AI 생성 중…' : r.source} · {r.generatedAt}</div>
+              <div className="rm-fmeta">NOVA · {busy ? 'AI 생성 중…' : r.source} · {r.generatedAt}</div>
             </div>
           </div>
           <div className="rm-tb-right">

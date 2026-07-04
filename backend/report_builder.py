@@ -261,7 +261,7 @@ def build_pdf(d: ReportData) -> io.BytesIO:
     # ── 헤더 ──
     story.append(Paragraph(f"{d.corp_name} — RM 액션 리포트", s["title"]))
     story.append(Paragraph(
-        f"생성일 {d.generated_at:%Y.%m.%d %H:%M} · CashMap × ADE"
+        f"생성일 {d.generated_at:%Y.%m.%d %H:%M} · NOVA (CashMap × ADE)"
         + (f" · 담당 RM {d.rm_name}" if d.rm_name else "")
         + (" · 부분 스코어" if d.is_partial else ""),
         s["subtitle"]
@@ -432,7 +432,7 @@ def build_pdf(d: ReportData) -> io.BytesIO:
 
     # ── 푸터 ──
     story.append(Paragraph(
-        "본 리포트는 CashMap × ADE 플랫폼이 자동 생성한 참고 자료이며, "
+        "본 리포트는 NOVA 플랫폼이 자동 생성한 참고 자료이며, "
         "최종 여신 의사결정은 RM·심사역의 판단을 따릅니다.",
         s["small"]
     ))

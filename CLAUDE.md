@@ -1,4 +1,8 @@
-# CashMap × ADE — CLAUDE.md
+# NOVA (CashMap × ADE) — CLAUDE.md
+
+> **서비스명: NOVA — Network of Vendor Analytics** (2026-07-04 확정)
+> 신성(NOVA)처럼, 공급망 속 아직 주목받지 않은 협력사·미래 성장 기업을 가장 먼저 발견한다는 의미.
+> CashMap(공시 분석)·ADE(행동 점수)는 NOVA를 구성하는 **엔진(모듈) 이름**으로 유지한다.
 
 > 이 파일은 Claude Code에서 프로젝트 컨텍스트를 이어받기 위한 문서입니다.
 > 새 세션 시작 시 반드시 이 파일을 먼저 읽으세요.

@@ -74,7 +74,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="CashMap × ADE API",
+    title="NOVA (CashMap × ADE) API",
     description="AI 기반 선제 여신 인텔리전스 플랫폼",
     version="2.0.0",
     lifespan=lifespan,
@@ -109,7 +109,7 @@ def _resolve_company(db: Session, company_id: int) -> Company:
 # ── 기본 ──────────────────────────────────────────────
 @app.get("/")
 def root():
-    return {"status": "ok", "service": "CashMap × ADE API"}
+    return {"status": "ok", "service": "NOVA API"}
 
 
 @app.get("/health")
@@ -793,7 +793,7 @@ def get_report_pdf(
     d = _gather_report(db, company_id, rm_name=user.name)
     _attach_narrative(db, d)   # 화면과 동일한 서사를 PDF에도 주입 (화면=PDF 일치)
     pdf = build_pdf(d)
-    filename = f"CashMap_리포트_{d.corp_name}_{datetime.now():%Y%m%d}.pdf"
+    filename = f"NOVA_리포트_{d.corp_name}_{datetime.now():%Y%m%d}.pdf"
     return Response(
         content=pdf.getvalue(),
         media_type="application/pdf",

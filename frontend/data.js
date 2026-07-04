@@ -768,13 +768,14 @@
   }
 
   window.ADE.bootstrap = async function () {
-    // 도커(nginx)로 서빙되면 /health·/api 가 같은 오리진으로 프록시된다 → 그쪽 우선.
-    // 개발 모드(npx serve)는 /health 가 404라 자동으로 localhost:8000 직접 호출로 폴백.
-    if (!window.CASHMAP_API_BASE && await _probe('/health', 1200)) {
+    // 도커(nginx)로 서빙되면 /api 가 같은 오리진으로 프록시된다 → 그쪽 우선.
+    // 개발 모드(npx serve)는 404라 자동으로 localhost:8000 직접 호출로 폴백.
+    // 프로브는 DB를 안 거치는 /api/ping — LLM 부하 중에도 즉답이라 오프라인 오판이 없다.
+    if (!window.CASHMAP_API_BASE && await _probe('/api/ping', 1200)) {
       window.ADE.API_BASE = '';
     }
-    let ok = await _probe(window.ADE.API_BASE + '/health', 1500);
-    if (!ok) ok = await _probe(window.ADE.API_BASE + '/health', 3500);   // 서버가 LLM 생성 등으로 순간 바쁠 때 오프라인 오판 방지
+    let ok = await _probe(window.ADE.API_BASE + '/api/ping', 1500);
+    if (!ok) ok = await _probe(window.ADE.API_BASE + '/api/ping', 3500);   // 순간 지연 재시도
     if (!ok) { window.ADE.online = false; window.ADE.source = 'mock'; return 'mock'; }
     window.ADE.online = true;
     let added = 0;

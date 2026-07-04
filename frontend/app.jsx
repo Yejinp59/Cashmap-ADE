@@ -20,6 +20,22 @@ function A4App() {
     try { u ? localStorage.setItem('cashmap.user', JSON.stringify(u)) : localStorage.removeItem('cashmap.user'); } catch (e) {}
   };
   const [route, setRoute] = useState('dash');
+
+  // 오프라인 오판 자동 복구 — 부팅 때 서버가 바빴어도 15초마다 재접속, 새로고침 불필요
+  const [, forceUp] = useState(0);
+  useEffect(() => {
+    if (window.ADE.source !== 'mock') return;
+    let stopped = false;
+    const t = setInterval(async () => {
+      const s = await window.ADE.bootstrap();
+      if (!stopped && s !== 'mock') {
+        clearInterval(t);
+        forceUp((x) => x + 1);
+        if (window.ADE.warmupNarratives) setTimeout(() => window.ADE.warmupNarratives(), 2000);
+      }
+    }, 15000);
+    return () => { stopped = true; clearInterval(t); };
+  }, []);
   const [selected, setSelected] = useState(null);
   const [focusCg, setFocusCg] = useState(null);
   // 대시보드 A(대안 1)는 로그인 직후가 아니라, 리스트에서 기업을 선택했을 때 표시

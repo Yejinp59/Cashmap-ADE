@@ -240,3 +240,4 @@ Thumbs.db
 backend/.env
 frontend/new_front/*.zip
 batch.log
+docker-compose.override.yml

@@ -112,6 +112,14 @@ def root():
     return {"status": "ok", "service": "NOVA API"}
 
 
+@app.get("/api/ping")
+def ping():
+    """DB를 건드리지 않는 초경량 생존 확인 — 프론트 부팅 프로브용.
+    LLM 생성 등으로 서버가 바쁠 때 /health(DB 왕복)가 굼떠져
+    오프라인으로 오판되던 문제를 피한다."""
+    return {"ok": True}
+
+
 @app.get("/health")
 def health(db: Session = Depends(get_db)):
     try:

@@ -147,7 +147,7 @@ function RMPeerChart({ peers }) {
 }
 
 /* ── 종이 페이지 (공용) ─────────────────────────────────────────────── */
-function RMReportPages({ c, cg, sec, r, gc, gradeLabel, dateStr, total, activePage, continuous }) {
+function RMReportPages({ c, cg, sec, r, gc, gradeLabel, dateStr, total, activePage, continuous, memo }) {
   const { GIcon } = window.G;
   const cls = (n) => (continuous || activePage === n) ? 'show' : 'hide';
   return (
@@ -245,7 +245,9 @@ function RMReportPages({ c, cg, sec, r, gc, gradeLabel, dateStr, total, activePa
 
         <section className="rm-sec">
           <h2 className="rm-h2"><span>07</span>RM 메모</h2>
-          <div className="rm-memo-lines"><span></span><span></span></div>
+          {memo && memo.trim()
+            ? <p className="rm-p rm-memo-text">{memo}</p>
+            : <div className="rm-memo-lines"><span></span><span></span></div>}
         </section>
 
         <div className="rm-sign">
@@ -261,7 +263,7 @@ function RMReportPages({ c, cg, sec, r, gc, gradeLabel, dateStr, total, activePa
 /* ── 우측 정보 패널 (인라인 리더기 전용) ──────────────────────────────
  * A4 문서 옆 빈 공간을 RM 실무에 쓸모 있는 정보로 채운다.
  *  · AI 리포트 정보(생성 엔진/시각) · 핵심 스냅샷 · 같은 공급망 동종기업 비교 · 문서 목차 */
-function RMReportSide({ c, cg, sec, r, gc, gradeLabel, busy }) {
+function RMReportSide({ c, cg, sec, r, gc, gradeLabel, busy, memo, onMemo }) {
   const { GIcon, gColor } = window.G;
   const all = window.ADE.companies || [];
   const peers = all.filter((x) => x.parent === c.parent).sort((a, b) => b.dScore - a.dScore);
@@ -300,6 +302,21 @@ function RMReportSide({ c, cg, sec, r, gc, gradeLabel, busy }) {
           <div><span>공급망 위치</span><b>{c.tier}차 협력사</b></div>
         </div>
       </div>
+
+      {/* RM 메모 작성 — 문서 07 섹션·PDF 인쇄에 실시간 반영 */}
+      {onMemo && (
+        <div className="rm-side-card">
+          <div className="rm-side-hd"><GIcon name="doc" size={14} /><span>RM 메모 작성</span></div>
+          <textarea
+            className="rm-memo-input"
+            value={memo || ''}
+            rows={5}
+            placeholder="접촉 계획·특이사항·내부 코멘트를 적어두세요. 문서의 07 RM 메모 칸과 PDF 인쇄에 그대로 들어갑니다."
+            onChange={(e) => onMemo(e.target.value)}
+          />
+          <p className="rm-side-note">기업별로 이 브라우저에 자동 저장됩니다.</p>
+        </div>
+      )}
 
       {/* 같은 공급망 동종기업 */}
       <div className="rm-side-card">
@@ -342,7 +359,16 @@ function RMReportInline({ companyId }) {
   const [zoom, setZoom] = useState(1);
   const { nar, busy, reanalyze } = useNarrative(companyId);
 
-  useEffect(() => { setZoom(1); }, [companyId]);
+  // RM 메모 — 기업별 localStorage 저장, 문서 07 섹션·PDF 인쇄에 즉시 반영
+  const [memo, setMemo] = useState('');
+  useEffect(() => {
+    setZoom(1);
+    try { setMemo(localStorage.getItem('cashmap.rmmemo.' + companyId) || ''); } catch (e) { setMemo(''); }
+  }, [companyId]);
+  const saveMemo = (v) => {
+    setMemo(v);
+    try { localStorage.setItem('cashmap.rmmemo.' + companyId, v); } catch (e) {}
+  };
 
   if (!c || !nar) return null;
   const TOTAL = 2;
@@ -384,9 +410,9 @@ function RMReportInline({ companyId }) {
       <div className={`rm-stage rm-stage-inline ${busy ? 'busy' : ''}`}>
         <div className="rm-body">
           <div className="rm-pages" style={{ '--z': zoom }}>
-            <RMReportPages c={c} cg={cg} sec={sec} r={r} gc={gc} gradeLabel={gradeLabel} dateStr={r.generatedAt} total={TOTAL} continuous />
+            <RMReportPages c={c} cg={cg} sec={sec} r={r} gc={gc} gradeLabel={gradeLabel} dateStr={r.generatedAt} total={TOTAL} continuous memo={memo} />
           </div>
-          <RMReportSide c={c} cg={cg} sec={sec} r={r} gc={gc} gradeLabel={gradeLabel} busy={busy} />
+          <RMReportSide c={c} cg={cg} sec={sec} r={r} gc={gc} gradeLabel={gradeLabel} busy={busy} memo={memo} onMemo={saveMemo} />
         </div>
       </div>
     </div>
@@ -456,7 +482,8 @@ function RMReportModal({ companyId, open, onClose }) {
         {/* 페이지 스테이지 */}
         <div className="rm-stage">
           <div className="rm-pages" style={{ '--z': zoom }}>
-            <RMReportPages c={c} cg={cg} sec={sec} r={r} gc={gc} gradeLabel={gradeLabel} dateStr={dateStr} total={TOTAL} activePage={page} />
+            <RMReportPages c={c} cg={cg} sec={sec} r={r} gc={gc} gradeLabel={gradeLabel} dateStr={dateStr} total={TOTAL} activePage={page}
+              memo={(() => { try { return localStorage.getItem('cashmap.rmmemo.' + c.id) || ''; } catch (e) { return ''; } })()} />
           </div>
         </div>
       </div>

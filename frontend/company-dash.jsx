@@ -144,21 +144,6 @@ function GCompanyDash({ companyId, onBack, onOpenCompany, onOpenNetwork, favs, t
             <GStat icon="doc" brand label="공시 건수" hint="수집·분석 완료" value={dzCount} />
           </div>
 
-          {/* RM 리포트 바로가기 (상세는 'RM 리포트 생성' 탭) */}
-          <div className="g-card g-card-pad">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-              <span className="g-sec-ic"><GIcon name="doc" size={17} /></span>
-              <div>
-                <div className="eyebrow">AI 영업 리포트</div>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>이미 작성되어 있어요</div>
-              </div>
-            </div>
-            <p className="tx-3" style={{ fontSize: 12, lineHeight: 1.6, margin: '0 0 12px' }}>야간 배치로 이 기업의 신호·근거를 종합한 RM 영업 리포트가 준비돼 있습니다.</p>
-            <button className="g-btn primary" style={{ width: '100%' }} onClick={() => setTab('report')}>
-              <GIcon name="doc" size={16} />리포트 열기
-            </button>
-          </div>
-
           {/* 대기업 신호 (섹션 맥락) */}
           <div className="g-card g-card-pad">
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 13 }}>

@@ -90,7 +90,7 @@ function A4App() {
             // mock-demo: 서버·AI(EXAONE)는 연결됐지만 실 D-Score가 아직 없어 데모 화면 유지
             // mock: 백엔드 자체가 안 닿음 (오프라인)
             const src = window.ADE.source;
-            const label = src === 'live-mix' ? 'Supabase 연결됨 · 반도체 섹션 = 실데이터'
+            const label = src === 'live-mix' ? 'Supabase 연결됨'
                         : src === 'live'     ? '실데이터 연결됨'
                         : window.ADE.online  ? '서버·AI 연결됨 · 데모 화면'
                         :                      '오프라인 · 데모 데이터';

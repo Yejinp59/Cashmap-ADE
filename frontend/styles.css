@@ -771,3 +771,20 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2c3845; }
   0%, 100% { opacity: .35; transform: scale(.85); }
   50%      { opacity: 1;   transform: scale(1.15); }
 }
+
+/* ── RM 메모: 사이드 작성칸 + 문서 내 표시 ─────────────────────────── */
+.rm-memo-input {
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 96px;
+  background: var(--bg-soft); color: var(--tx);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; font: 500 12.5px/1.65 'Noto Sans KR', sans-serif;
+  outline: none; transition: border-color .15s;
+}
+.rm-memo-input:focus { border-color: var(--g-brand); }
+.rm-memo-input::placeholder { color: var(--tx-3); }
+/* 종이(문서) 위 메모 — 잉크 느낌, 인쇄 포함 */
+.rm-memo-text {
+  white-space: pre-wrap; word-break: break-word;
+  color: #1a4b8f !important; font-weight: 500;
+  border-bottom: 1px dashed #c9d4de; padding-bottom: 6px;
+}

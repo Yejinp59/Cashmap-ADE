@@ -755,14 +755,21 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2c3845; }
 @media print {
   body.rm-printing * { visibility: hidden !important; }
   body.rm-printing .rm-print-root, body.rm-printing .rm-print-root * { visibility: visible !important; }
-  body.rm-printing .rm-print-root { position: absolute; inset: 0; background: #fff; backdrop-filter: none; }
+  /* ⚠️ 조상 컨테이너의 100vh·overflow 제약 해제 — 없으면 첫 페이지 이후가 통째로 잘린다 */
+  body.rm-printing, html { height: auto !important; overflow: visible !important; }
+  body.rm-printing .g-shell, body.rm-printing .g-main, body.rm-printing .g-scroll,
+  body.rm-printing .cd-panel, body.rm-printing .cd-reportwrap {
+    display: block !important; height: auto !important; max-height: none !important; overflow: visible !important;
+  }
+  /* inset:0(bottom:0)은 높이를 한 화면으로 고정시킴 → top/left만 고정하고 높이는 내용만큼 */
+  body.rm-printing .rm-print-root { position: absolute; left: 0; top: 0; width: 100%; height: auto; background: #fff; backdrop-filter: none; }
   body.rm-printing .rm-toolbar { display: none !important; }
-  body.rm-printing .rm-reader, body.rm-printing .rm-inline { width: 100%; background: #fff; border: none; }
-  body.rm-printing .rm-stage { overflow: visible; padding: 0; display: block; }
+  body.rm-printing .rm-reader, body.rm-printing .rm-inline { width: 100%; height: auto; background: #fff; border: none; }
+  body.rm-printing .rm-stage { overflow: visible !important; height: auto !important; padding: 0; display: block; }
   body.rm-printing .rm-side { display: none !important; }
   body.rm-printing .rm-body { display: block; }
-  body.rm-printing .rm-pages { width: 100% !important; gap: 0 !important; }
-  body.rm-printing .rm-page { display: flex !important; box-shadow: none; page-break-after: always; width: 100%; }
+  body.rm-printing .rm-pages { width: 100% !important; gap: 0 !important; display: block !important; }
+  body.rm-printing .rm-page { display: flex !important; box-shadow: none; page-break-after: always; break-inside: avoid; width: 100%; }
   @page { size: A4; margin: 0; }
 }
 

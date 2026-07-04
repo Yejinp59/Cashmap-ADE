@@ -624,42 +624,75 @@
     catch (e) { return null; }
   }
 
-  // 백엔드 실데이터 → 이 UI(목업) 형태로 변환. 화면을 못 채우면 null 반환 → 목업 유지.
-  async function _adaptLive() {
+  /* 백엔드 실데이터(팀 Supabase)를 목업 화면 위에 '오버레이'.
+   * 목업 57개사(발표 데모)는 그대로 두고, AI-B가 투입한 실 D-Score 기업들을
+   * '실데이터' 섹션(hub 탭)으로 추가한다 — sections/companies/byId 가 전부
+   * 같은 참조라 in-place push 만으로 모든 화면(허브·상세·리포트·3D)에 반영된다.
+   * (구 전면교체 방식 _adaptLive 는 폐기: limit=1000→422, ds.score 필드명 오류로
+   *  동작한 적이 없고, 섹션·피처 구조를 못 채워 전환 시 화면이 깨졌음) */
+  async function _overlayLive() {
     const cosRaw = await _jget('/api/companies');
-    if (!Array.isArray(cosRaw) || !cosRaw.length) return null;
-    const dscores = await _jget('/api/ade/dscore?limit=1000');
-    if (!Array.isArray(dscores) || !dscores.length) return null; // D-Score 없으면 이 화면을 못 채움
+    if (!Array.isArray(cosRaw) || !cosRaw.length) return 0;
+    const dscores = await _jget('/api/ade/dscore?limit=500');   // 백엔드 상한 500
+    if (!Array.isArray(dscores) || !dscores.length) return 0;
     const signals = (await _jget('/api/cashmap/signal/summary')) || [];
 
     const pct = (v) => Math.max(0, Math.min(100, Math.round((v || 0) * 100)));
-    const sigBy = {}; signals.forEach((s) => { sigBy[s.corp_code] = pct(s.latest_score); });
-    const dsBy = {}; dscores.forEach((d) => { dsBy[d.corp_code || d.company_id] = d; });
+    const clamp = (v) => Math.max(4, Math.min(96, Math.round(v)));
+    const coBy = {}; cosRaw.forEach((c) => { coBy[c.corp_code] = c; });
 
-    const cgs = [], cos = [], _byId = {}, _cgById = {};
-    cosRaw.forEach((co) => {
-      if (!co.is_anchor) return;
-      const id = co.corp_code || String(co.id);
-      const cg = { id, name: co.corp_name, sector: co.sector || '', signal: sigBy[co.corp_code] || 0, filings: 0, theme: '' };
-      cgs.push(cg); _cgById[id] = cg;
-    });
-    cosRaw.forEach((co) => {
-      if (co.is_anchor) return;
-      const ds = dsBy[co.corp_code] || dsBy[co.id];
-      if (!ds) return;
-      const id = co.corp_code || String(co.id);
-      const grade = ds.grade || 'MONITOR';
-      const c = {
-        id, name: co.corp_name, sector: co.sector || '', listed: !!co.is_listed,
-        parent: cgs[0] ? cgs[0].id : null, tier: 1, dScore: pct(ds.score), grade,
-        signal: sigBy[co.corp_code] || 0,
-        discrepancy: grade === 'POSITIVE' ? 12 : grade === 'NEGATIVE' ? -12 : 0,
-        features: {}, summary: '', updatedAt: new Date().toISOString(),
+    // 실 대기업(anchor) 최신 신호 — 섹션 카드/기업 signal 로 사용
+    const anchors = cosRaw.filter((c) => c.is_anchor);
+    const sigBy = {}; signals.forEach((s) => { sigBy[s.corp_code] = pct(s.latest_score); });
+    const anchorSig = Math.max(0, ...anchors.map((a) => sigBy[a.corp_code] || 0)) || 55;
+
+    const CG_ID = 'cg-real';
+    if (!cgById[CG_ID]) {
+      const cg = {
+        id: CG_ID, name: anchors[0] ? anchors[0].corp_name : '삼성전자',
+        sector: '반도체 · 실데이터', signal: anchorSig, filings: 0,
+        theme: 'HBM · AI 반도체',
       };
-      cos.push(c); _byId[id] = c;
+      conglomerates.push(cg); cgById[CG_ID] = cg;
+      sections.push({
+        key: 'real', label: '실데이터',
+        sub: anchors.map((a) => a.corp_name).join('·') + ' 실공급망 · Supabase',
+        cg: CG_ID, icon: 'chip',
+      });
+    }
+
+    let added = 0;
+    dscores.forEach((d) => {
+      const co = coBy[d.corp_code] || {};
+      const id = 'real-' + (d.corp_code || d.company_id);
+      if (byId[id]) return;                                   // 재부트스트랩 중복 방지
+      const dScore = pct(d.d_score);
+      const rr = (d.rd_ratio || 0) * 100, rg = (d.rd_growth || 0) * 100;
+      const ms = (d.op_margin_slope || 0) * 100, ig = (d.inventor_count_yoy || 0) * 100;
+      const c = {
+        id, name: d.corp_name || co.corp_name || String(d.corp_code),
+        sector: (co.sector || '반도체') + ' · 실데이터',
+        listed: true, parent: CG_ID, tier: 1,
+        dScore, grade: d.grade || 'MONITOR',
+        signal: anchorSig,
+        // 실 괴리 지표는 AI-A 산출 대기 — 그때까지 등급 기반 근사(데모 보강)
+        discrepancy: d.grade === 'POSITIVE' ? 10 : d.grade === 'NEGATIVE' ? -10 : 2,
+        features: {
+          patentCount:    f(d.active_patents ?? 0, clamp((d.active_patents || 0) / 4)),
+          rndRatio:       f(+rr.toFixed(1), clamp(rr * 6.5)),
+          rndGrowth:      f(+rg.toFixed(0), clamp((rg + 20) * 1.6)),
+          marginSlope:    f(+ms.toFixed(1), clamp((ms + 2) * 20)),
+          ipcEntropy:     f(d.ipc_entropy != null ? +(+d.ipc_entropy).toFixed(2) : 0,
+                            d.ipc_entropy != null ? clamp(d.ipc_entropy * 100) : 8),
+          inventorGrowth: f(+ig.toFixed(0), clamp(ig + 30)),
+          disclosureWill: f(anchorSig, anchorSig),
+        },
+        summary: `팀 Supabase 실데이터 — AI-B D-Score ${dScore}점 (${d.updated_at ? d.updated_at.slice(0, 10) : '초안'} 산출). 괴리·공시 항목은 데모 보강값.`,
+        updatedAt: d.updated_at || new Date().toISOString(),
+      };
+      companies.push(c); byId[id] = c; added++;
     });
-    if (!cos.length) return null;
-    return { conglomerates: cgs, companies: cos, byId: _byId, cgById: _cgById };
+    return added;
   }
 
   window.ADE.bootstrap = async function () {
@@ -671,19 +704,11 @@
     const ok = await _probe(window.ADE.API_BASE + '/health', 1500);
     if (!ok) { window.ADE.online = false; window.ADE.source = 'mock'; return 'mock'; }
     window.ADE.online = true;
-    let live = null;
-    try { live = await _adaptLive(); } catch (e) { live = null; }
-    if (live) {
-      window.ADE.companies = live.companies;
-      window.ADE.conglomerates = live.conglomerates;
-      window.ADE.byId = live.byId;
-      window.ADE.cgById = live.cgById;
-      window.ADE.source = 'live';
-      return 'live';
-    }
-    // 서버는 살아있지만 화면 채울 실데이터(D-Score 등)가 아직 없음 → 데모 목업 유지
-    window.ADE.source = 'mock-demo';
-    return 'mock-demo';
+    let added = 0;
+    try { added = await _overlayLive(); } catch (e) { added = 0; }
+    // live-mix: 목업 데모 + Supabase 실 D-Score 기업('실데이터' 섹션) 동시 표시
+    window.ADE.source = added > 0 ? 'live-mix' : 'mock-demo';
+    return window.ADE.source;
   };
 
   // 공시 AI 요약 — 서버 로컬 LLM(EXAONE). 실데이터(rcept_no)는 원문 기반,

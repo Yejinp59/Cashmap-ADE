@@ -86,12 +86,21 @@ function A4App() {
           <div style={{ flex: 1 }} />
           <GWarmStatus />
           {(() => {
-            const live = window.ADE.source === 'live';
+            // live-mix: Supabase 실 D-Score 기업이 '실데이터' 섹션으로 화면에 올라온 상태
+            // mock-demo: 서버·AI(EXAONE)는 연결됐지만 실 D-Score가 아직 없어 데모 화면 유지
+            // mock: 백엔드 자체가 안 닿음 (오프라인)
+            const src = window.ADE.source;
+            const label = src === 'live-mix' ? 'Supabase 연결됨 · 실데이터 섹션 표시 중'
+                        : src === 'live'     ? '실데이터 연결됨'
+                        : window.ADE.online  ? '서버·AI 연결됨 · 데모 화면'
+                        :                      '오프라인 · 데모 데이터';
+            const dot = (src === 'live-mix' || src === 'live') ? 'var(--g-pos)'
+                      : window.ADE.online ? 'var(--g-brand)' : 'var(--g-mon)';
             return (
               <div className="tx-3" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}
-                   title={`데이터 소스: ${window.ADE.source}`}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: live ? 'var(--g-pos)' : 'var(--g-mon)' }} />
-                {live ? '실데이터 연결됨' : '데모 데이터(목업)'}
+                   title={`데이터 소스: ${src} · API: ${window.ADE.API_BASE || '같은 오리진(nginx 프록시)'}`}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: dot }} />
+                {label}
               </div>
             );
           })()}
